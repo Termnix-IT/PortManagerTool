@@ -1,0 +1,17 @@
+{
+  "name": "port-manager-tool",
+  "version": "1.0.0",
+  "description": "Electron-based port management tool for Windows",
+  "main": "main.js",
+  "scripts": {
+    "start": "npx electron ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "electron": "^41.2.1",
+    "electron-store": "^8.2.0"
+  }
+}

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.tailwindcss.com 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+  <title>ポート管理ツール</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            surface: '#1e293b',
+            base: '#0f172a',
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark bg-base text-slate-200 h-screen flex flex-col overflow-hidden select-none">
+
+  <!-- Header / Tabs -->
+  <header class="flex items-center border-b border-slate-700 bg-surface px-4">
+    <h1 class="text-sm font-bold tracking-wide text-slate-400 mr-6 py-3">ポート管理</h1>
+    <nav class="flex gap-1">
+      <button class="tab-btn active" data-tab="active-ports">使用中ポート</button>
+      <button class="tab-btn" data-tab="favorites">お気に入り</button>
+      <button class="tab-btn" data-tab="monitor">監視</button>
+    </nav>
+  </header>
+
+  <!-- Tab Contents -->
+  <main class="flex-1 overflow-hidden">
+
+    <!-- ===== Active Ports Tab ===== -->
+    <section id="tab-active-ports" class="tab-content active flex flex-col h-full">
+      <!-- Filters -->
+      <div class="flex items-center gap-3 px-4 py-3 border-b border-slate-700 bg-surface/50">
+        <input id="filter-text" type="text" placeholder="ポート番号やプロセス名で検索..."
+          class="bg-slate-800 border border-slate-600 rounded px-3 py-1.5 text-sm w-56 focus:outline-none focus:border-blue-500">
+        <select id="filter-protocol" class="bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-sm">
+          <option value="ALL">すべて</option>
+          <option value="TCP">TCP</option>
+          <option value="UDP">UDP</option>
+        </select>
+        <select id="filter-state" class="bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-sm">
+          <option value="Listen">リスニング</option>
+          <option value="ALL">すべての状態</option>
+          <option value="Established">接続済み</option>
+        </select>
+        <button id="btn-refresh" class="ml-auto bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-1.5 rounded transition-colors">
+          更新
+        </button>
+      </div>
+      <!-- Table -->
+      <div class="flex-1 overflow-auto px-4 py-2">
+        <table class="w-full text-sm">
+          <thead class="sticky top-0 bg-base">
+            <tr class="text-left text-slate-400 border-b border-slate-700">
+              <th class="py-2 px-2 cursor-pointer hover:text-slate-200" data-sort="LocalPort">ポート</th>
+              <th class="py-2 px-2">プロトコル</th>
+              <th class="py-2 px-2 cursor-pointer hover:text-slate-200" data-sort="PID">PID</th>
+              <th class="py-2 px-2 cursor-pointer hover:text-slate-200" data-sort="ProcessName">プロセス</th>
+              <th class="py-2 px-2">状態</th>
+              <th class="py-2 px-2">ローカルアドレス</th>
+              <th class="py-2 px-2 text-right">操作</th>
+            </tr>
+          </thead>
+          <tbody id="ports-table-body">
+            <tr><td colspan="7" class="text-center text-slate-500 py-8">読み込み中...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="px-4 py-2 border-t border-slate-700 text-xs text-slate-500">
+        <span id="port-count">0</span> 件
+      </div>
+    </section>
+
+    <!-- ===== Favorites Tab ===== -->
+    <section id="tab-favorites" class="tab-content flex flex-col h-full">
+      <!-- Add Favorite Form -->
+      <div class="flex items-center gap-3 px-4 py-3 border-b border-slate-700 bg-surface/50">
+        <input id="fav-port" type="number" placeholder="ポート番号" min="1" max="65535"
+          class="bg-slate-800 border border-slate-600 rounded px-3 py-1.5 text-sm w-24 focus:outline-none focus:border-blue-500">
+        <input id="fav-label" type="text" placeholder="ラベル"
+          class="bg-slate-800 border border-slate-600 rounded px-3 py-1.5 text-sm w-40 focus:outline-none focus:border-blue-500">
+        <input id="fav-desc" type="text" placeholder="説明（任意）"
+          class="bg-slate-800 border border-slate-600 rounded px-3 py-1.5 text-sm flex-1 focus:outline-none focus:border-blue-500">
+        <select id="fav-protocol" class="bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-sm">
+          <option value="TCP">TCP</option>
+          <option value="UDP">UDP</option>
+        </select>
+        <button id="btn-add-fav" class="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-1.5 rounded transition-colors">
+          + 追加
+        </button>
+      </div>
+      <!-- Favorites List -->
+      <div class="flex-1 overflow-auto px-4 py-2">
+        <table class="w-full text-sm">
+          <thead class="sticky top-0 bg-base">
+            <tr class="text-left text-slate-400 border-b border-slate-700">
+              <th class="py-2 px-2">ラベル</th>
+              <th class="py-2 px-2">ポート</th>
+              <th class="py-2 px-2">プロトコル</th>
+              <th class="py-2 px-2">説明</th>
+              <th class="py-2 px-2">状態</th>
+              <th class="py-2 px-2 text-right">操作</th>
+            </tr>
+          </thead>
+          <tbody id="favorites-table-body">
+            <tr><td colspan="6" class="text-center text-slate-500 py-8">お気に入りが登録されていません</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== Monitor Tab ===== -->
+    <section id="tab-monitor" class="tab-content flex flex-col h-full">
+      <!-- Add Monitor Form -->
+      <div class="flex items-center gap-3 px-4 py-3 border-b border-slate-700 bg-surface/50">
+        <input id="mon-port" type="number" placeholder="ポート番号" min="1" max="65535"
+          class="bg-slate-800 border border-slate-600 rounded px-3 py-1.5 text-sm w-24 focus:outline-none focus:border-blue-500">
+        <input id="mon-label" type="text" placeholder="ラベル"
+          class="bg-slate-800 border border-slate-600 rounded px-3 py-1.5 text-sm w-40 focus:outline-none focus:border-blue-500">
+        <label class="flex items-center gap-1 text-xs text-slate-400">
+          <input id="mon-notify-occupied" type="checkbox" checked class="accent-blue-500"> 使用開始時
+        </label>
+        <label class="flex items-center gap-1 text-xs text-slate-400">
+          <input id="mon-notify-freed" type="checkbox" checked class="accent-blue-500"> 解放時
+        </label>
+        <button id="btn-add-mon" class="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-1.5 rounded transition-colors">
+          + 追加
+        </button>
+        <div class="ml-auto flex items-center gap-2 text-xs text-slate-400">
+          監視間隔:
+          <input id="mon-interval" type="number" min="1" max="60" value="5"
+            class="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm w-16 focus:outline-none focus:border-blue-500">
+          秒
+          <button id="btn-apply-interval" class="bg-slate-700 hover:bg-slate-600 text-white text-xs px-3 py-1 rounded transition-colors">
+            適用
+          </button>
+        </div>
+      </div>
+      <!-- Monitor List -->
+      <div class="flex-1 overflow-auto px-4 py-2">
+        <table class="w-full text-sm">
+          <thead class="sticky top-0 bg-base">
+            <tr class="text-left text-slate-400 border-b border-slate-700">
+              <th class="py-2 px-2">ラベル</th>
+              <th class="py-2 px-2">ポート</th>
+              <th class="py-2 px-2">状態</th>
+              <th class="py-2 px-2">通知</th>
+              <th class="py-2 px-2">有効</th>
+              <th class="py-2 px-2 text-right">操作</th>
+            </tr>
+          </thead>
+          <tbody id="monitor-table-body">
+            <tr><td colspan="6" class="text-center text-slate-500 py-8">監視設定がありません</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

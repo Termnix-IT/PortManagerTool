@@ -1,0 +1,135 @@
+/* Tab buttons */
+.tab-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #94a3b8;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+  cursor: pointer;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+}
+.tab-btn:hover {
+  color: #e2e8f0;
+}
+.tab-btn.active {
+  color: #60a5fa;
+  border-bottom-color: #3b82f6;
+}
+
+/* Tab content visibility */
+.tab-content {
+  display: none;
+}
+.tab-content.active {
+  display: flex;
+}
+
+/* Table rows */
+tbody tr {
+  border-bottom: 1px solid #1e293b;
+}
+tbody tr:hover {
+  background-color: #1e293b;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Status dots */
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+.status-dot.free {
+  background-color: #22c55e;
+}
+.status-dot.occupied {
+  background-color: #ef4444;
+}
+
+/* Action buttons in tables */
+.action-btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.15s;
+}
+.action-btn.kill {
+  background-color: #dc2626;
+  color: white;
+}
+.action-btn.kill:hover {
+  background-color: #b91c1c;
+}
+.action-btn.star {
+  background-color: #d97706;
+  color: white;
+}
+.action-btn.star:hover {
+  background-color: #b45309;
+}
+.action-btn.monitor {
+  background-color: #2563eb;
+  color: white;
+}
+.action-btn.monitor:hover {
+  background-color: #1d4ed8;
+}
+.action-btn.delete {
+  background-color: #475569;
+  color: white;
+}
+.action-btn.delete:hover {
+  background-color: #64748b;
+}
+
+/* Toggle switch */
+.toggle {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  background: #475569;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+  border: none;
+  padding: 0;
+}
+.toggle.on {
+  background: #3b82f6;
+}
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.2s;
+}
+.toggle.on::after {
+  transform: translateX(16px);
+}

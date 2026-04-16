@@ -1,0 +1,23 @@
+node_modules/
+dist/
+out/
+
+.env
+.env.*
+
+CLAUDE.md
+.claude/
+
+# Electron
+*.asar
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
