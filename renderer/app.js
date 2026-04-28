@@ -57,7 +57,7 @@ function setView(viewName, options = {}) {
   if (targetView === 'dashboard') {
     loadDashboard();
     if (viewName === 'ports') {
-      document.getElementById('ports-panel').scrollIntoView({ block: 'start' });
+      focusPortsPanel();
     }
   }
   if (targetView === 'favorites') loadFavorites();
@@ -68,6 +68,13 @@ function setView(viewName, options = {}) {
 function updateHistoryButtons() {
   btnHistoryBack.disabled = viewHistoryIndex <= 0;
   btnHistoryForward.disabled = viewHistoryIndex >= viewHistory.length - 1;
+}
+
+function focusPortsPanel() {
+  const panel = document.getElementById('ports-panel');
+  if (!panel) return;
+  panel.classList.remove('focus-flash');
+  requestAnimationFrame(() => panel.classList.add('focus-flash'));
 }
 
 btnHistoryBack.addEventListener('click', () => {
@@ -211,12 +218,13 @@ function renderPorts() {
     const fav = getFavoriteForPort(p.LocalPort, p.Protocol);
     const mon = getMonitorForPort(p.LocalPort, p.Protocol);
     const isSelected = key === selectedPortKey;
+    const canStop = canStopPort(p);
     return `
       <tr class="${isSelected ? 'selected' : ''}" data-port-key="${escapeAttr(key)}">
         <td>
-          <button class="star-btn ${fav ? 'active' : ''}" title="お気に入り" onclick="quickFav(${toNumber(p.LocalPort)}, ${jsString(p.ProcessName)}, ${jsString(p.Protocol)})">${fav ? '★' : '☆'}</button>
+          <button class="star-btn ${fav ? 'active' : ''}" title="お気に入り" data-action="favorite" data-port="${toNumber(p.LocalPort)}" data-protocol="${escapeAttr(p.Protocol)}" data-process-name="${escapeAttr(p.ProcessName || '')}">${fav ? '★' : '☆'}</button>
         </td>
-        <td><button class="port-link" onclick="selectPort(${jsString(key)})">${escapeHtml(String(p.LocalPort))}</button></td>
+        <td><button class="port-link" data-action="select">${escapeHtml(String(p.LocalPort))}</button></td>
         <td>
           <div class="process-cell">
             <span class="process-badge">${escapeHtml(getProcessInitial(p.ProcessName))}</span>
@@ -228,11 +236,11 @@ function renderPorts() {
         </td>
         <td>${renderStatePill(p)}</td>
         <td class="pid-text">${escapeHtml(String(p.PID || '-'))}</td>
-        <td><button class="toggle ${mon && mon.enabled ? 'on' : ''}" title="監視切替" onclick="togglePortMonitor(${toNumber(p.LocalPort)}, ${jsString(p.Protocol)}, ${jsString(p.ProcessName)})"></button></td>
+        <td><button class="toggle ${mon && mon.enabled ? 'on' : ''}" title="監視切替" data-action="monitor" data-port="${toNumber(p.LocalPort)}" data-protocol="${escapeAttr(p.Protocol)}" data-process-name="${escapeAttr(p.ProcessName || '')}"></button></td>
         <td>
           <div class="row-actions">
-            <button class="action-btn" onclick="selectPort(${jsString(key)})">確認</button>
-            <button class="action-btn kill" onclick="killPort(${toNumber(p.PID)})">停止</button>
+            <button class="action-btn" data-action="select">確認</button>
+            ${canStop ? `<button class="action-btn kill" data-action="kill" data-pid="${toNumber(p.PID)}">停止</button>` : '<span class="action-placeholder">停止不可</span>'}
           </div>
         </td>
       </tr>
@@ -252,11 +260,6 @@ function renderMetrics() {
   document.getElementById('metric-monitoring-note').textContent = `${monitors.length} 件の設定`;
   document.getElementById('metric-conflicts-note').textContent = metrics.conflicts > 0 ? '確認が必要' : '競合なし';
   document.getElementById('metric-favorites-note').textContent = 'お気に入り登録';
-
-  renderSparkline('spark-active', metricHistory.map((m) => m.active), '#2563eb');
-  renderSparkline('spark-monitoring', metricHistory.map((m) => m.monitoring), '#08b8c9');
-  renderSparkline('spark-conflicts', metricHistory.map((m) => m.conflicts), '#f23567');
-  renderSparkline('spark-favorites', metricHistory.map((m) => m.favorites), '#7c3aed');
 }
 
 function calculateMetrics() {
@@ -324,13 +327,6 @@ function renderMetricChart() {
   `;
 }
 
-function renderSparkline(id, values, color) {
-  const svg = document.getElementById(id);
-  if (!svg) return;
-  const maxValue = Math.max(1, ...values);
-  svg.innerHTML = pathForSeries(values, maxValue, color, 120, 34);
-}
-
 function pathForSeries(values, maxValue, width, heightOrColor, maybeWidth, maybeHeight) {
   let color = width;
   let w = heightOrColor;
@@ -342,10 +338,11 @@ function pathForSeries(values, maxValue, width, heightOrColor, maybeWidth, maybe
   }
 
   const safeValues = values.length > 1 ? values : [0, values[0] || 0];
-  const step = w / Math.max(1, safeValues.length - 1);
+  const inset = 4;
+  const step = (w - inset * 2) / Math.max(1, safeValues.length - 1);
   const points = safeValues.map((value, index) => {
-    const x = index * step;
-    const y = h - (value / maxValue) * (h - 8) - 4;
+    const x = inset + index * step;
+    const y = h - (value / maxValue) * (h - inset * 2) - inset;
     return `${x.toFixed(2)},${y.toFixed(2)}`;
   });
   return `<path d="M ${points.join(' L ')}" stroke="${color}"></path>`;
@@ -434,9 +431,10 @@ async function quickFav(port, processName, protocol = 'TCP') {
 }
 
 async function addMonitorFromFav(port, label, protocol = 'TCP') {
+  const existing = getMonitorForPort(port, protocol);
   await window.portManager.addMonitor({ port, label, protocol });
-  pushEvent('ok', `ポート ${port} の監視を開始しました`);
-  showToast(`ポート ${port} を監視に追加しました`);
+  pushEvent('ok', `ポート ${port} の監視を${existing ? '有効化' : '開始'}しました`);
+  showToast(`ポート ${port} の監視を${existing ? '有効化' : '追加'}しました`);
   loadFavorites();
 }
 
@@ -565,6 +563,33 @@ document.querySelectorAll('th[data-sort]').forEach((th) => {
 filterText.addEventListener('input', renderPorts);
 filterProtocol.addEventListener('change', renderPorts);
 filterState.addEventListener('change', renderPorts);
+portsTableBody.addEventListener('click', async (event) => {
+  const row = event.target.closest('tr[data-port-key]');
+  if (!row) return;
+
+  const actionButton = event.target.closest('[data-action]');
+  if (!actionButton) {
+    selectPort(row.dataset.portKey);
+    return;
+  }
+
+  const action = actionButton.dataset.action;
+  if (action === 'select') {
+    selectPort(row.dataset.portKey);
+    return;
+  }
+  if (action === 'favorite') {
+    await quickFav(toNumber(actionButton.dataset.port), actionButton.dataset.processName, actionButton.dataset.protocol);
+    return;
+  }
+  if (action === 'monitor') {
+    await togglePortMonitor(toNumber(actionButton.dataset.port), actionButton.dataset.protocol, actionButton.dataset.processName);
+    return;
+  }
+  if (action === 'kill') {
+    await killPort(toNumber(actionButton.dataset.pid));
+  }
+});
 btnRefresh.addEventListener('click', async () => {
   await loadDashboard();
   pushEvent('ok', 'ポート一覧を更新しました');
@@ -599,7 +624,10 @@ async function killPort(pid) {
 
 function selectPort(key) {
   selectedPortKey = key;
-  renderPorts();
+  portsTableBody.querySelectorAll('tr[data-port-key]').forEach((row) => {
+    row.classList.toggle('selected', row.dataset.portKey === key);
+  });
+  renderDetail();
 }
 
 function showPortFromSecondary(port) {
@@ -654,6 +682,10 @@ function getFavoriteForPort(port, protocol) {
 
 function getMonitorForPort(port, protocol) {
   return monitors.find((m) => Number(m.port) === Number(port) && (m.protocol || 'TCP') === (protocol || 'TCP'));
+}
+
+function canStopPort(port) {
+  return port.Protocol === 'UDP' || port.State === 'Listen';
 }
 
 function stateLabel(port) {

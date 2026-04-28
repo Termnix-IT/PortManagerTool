@@ -20,6 +20,9 @@ function getFavorites() {
 
 function addFavorite(data) {
   const favorites = getFavorites();
+  const existing = favorites.find((f) => Number(f.port) === Number(data.port) && (f.protocol || 'TCP') === (data.protocol || 'TCP'));
+  if (existing) return existing;
+
   const entry = {
     id: `fav_${Date.now()}`,
     port: data.port,
@@ -47,10 +50,27 @@ function getMonitors() {
 
 function addMonitor(data) {
   const monitors = getMonitors();
+  const protocol = data.protocol || 'TCP';
+  const existing = monitors.find((m) => Number(m.port) === Number(data.port) && (m.protocol || 'TCP') === protocol);
+  if (existing) {
+    const updated = {
+      ...existing,
+      label: data.label || existing.label || `ポート ${data.port}`,
+      enabled: true,
+      notifyOnOccupied: data.notifyOnOccupied !== false,
+      notifyOnFreed: data.notifyOnFreed !== false,
+      protocol,
+    };
+    const idx = monitors.findIndex((m) => m.id === existing.id);
+    monitors[idx] = updated;
+    store.set('monitors', monitors);
+    return updated;
+  }
+
   const entry = {
     id: `mon_${Date.now()}`,
     port: data.port,
-    protocol: data.protocol || 'TCP',
+    protocol,
     label: data.label || `ポート ${data.port}`,
     enabled: true,
     notifyOnOccupied: data.notifyOnOccupied !== false,

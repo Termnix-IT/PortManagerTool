@@ -12,11 +12,11 @@ async function tick() {
   const monitors = store.getMonitors().filter((m) => m.enabled);
   if (monitors.length === 0) return;
 
-  const ports = [...new Set(monitors.map((m) => m.port))];
-  const portMap = await checkPorts(ports);
+  const targets = monitors.map((m) => ({ port: m.port, protocol: m.protocol || 'TCP' }));
+  const portMap = await checkPorts(targets);
 
   for (const mon of monitors) {
-    const info = portMap.get(mon.port);
+    const info = portMap.get(`${mon.protocol || 'TCP'}:${Number(mon.port)}`);
     if (!info) continue;
 
     const newState = info.occupied ? 'occupied' : 'free';

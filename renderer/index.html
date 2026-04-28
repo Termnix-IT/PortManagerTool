@@ -79,8 +79,8 @@
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M10.5 4a6.5 6.5 0 0 1 5.14 10.48l4.44 4.44-1.42 1.42-4.44-4.44A6.5 6.5 0 1 1 10.5 4Zm0 2a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9Z"/>
           </svg>
-          <input id="filter-text" type="text" placeholder="ポート番号、プロセス、PID、アドレスで検索...">
-          <kbd>Ctrl + K</kbd>
+          <input id="filter-text" type="text" placeholder="検索">
+          <kbd>Ctrl K</kbd>
         </div>
         <div class="top-actions">
           <button id="btn-refresh" class="icon-btn" title="更新" aria-label="更新">
@@ -94,43 +94,39 @@
         <section id="view-dashboard" class="view active">
           <div class="dashboard-grid">
             <section class="main-column">
-              <div class="kpi-grid">
-                <article class="metric-card metric-blue">
-                  <div class="metric-icon">▤</div>
-                  <div>
-                    <p>使用中ポート</p>
-                    <strong id="metric-active">0</strong>
-                    <span id="metric-active-note">スキャン待機中</span>
-                  </div>
-                  <svg id="spark-active" class="sparkline" viewBox="0 0 120 36" preserveAspectRatio="none"></svg>
-                </article>
-                <article class="metric-card metric-cyan">
-                  <div class="metric-icon">◎</div>
-                  <div>
-                    <p>監視中</p>
-                    <strong id="metric-monitoring">0</strong>
-                    <span id="metric-monitoring-note">有効な監視</span>
-                  </div>
-                  <svg id="spark-monitoring" class="sparkline" viewBox="0 0 120 36" preserveAspectRatio="none"></svg>
-                </article>
-                <article class="metric-card metric-rose">
-                  <div class="metric-icon">△</div>
-                  <div>
-                    <p>競合</p>
-                    <strong id="metric-conflicts">0</strong>
-                    <span id="metric-conflicts-note">同一ポート検出</span>
-                  </div>
-                  <svg id="spark-conflicts" class="sparkline" viewBox="0 0 120 36" preserveAspectRatio="none"></svg>
-                </article>
-                <article class="metric-card metric-violet">
-                  <div class="metric-icon">◇</div>
-                  <div>
-                    <p>予約済み</p>
-                    <strong id="metric-favorites">0</strong>
-                    <span id="metric-favorites-note">お気に入り登録</span>
-                  </div>
-                  <svg id="spark-favorites" class="sparkline" viewBox="0 0 120 36" preserveAspectRatio="none"></svg>
-                </article>
+              <div class="status-strip" aria-label="ポート概要">
+                <div class="status-item metric-blue">
+                  <span class="metric-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M4 6.5h16v2H4v-2Zm0 4.5h16v2H4v-2Zm0 4.5h10v2H4v-2Z"/></svg>
+                  </span>
+                  <span class="status-label">使用中</span>
+                  <strong id="metric-active">0</strong>
+                  <span id="metric-active-note" class="status-note">スキャン待機中</span>
+                </div>
+                <div class="status-item metric-cyan">
+                  <span class="metric-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M12 4a8 8 0 1 0 8 8h-2a6 6 0 1 1-6-6V4Zm1 1v8h7a8 8 0 0 0-7-8Z"/></svg>
+                  </span>
+                  <span class="status-label">監視中</span>
+                  <strong id="metric-monitoring">0</strong>
+                  <span id="metric-monitoring-note" class="status-note">有効な監視</span>
+                </div>
+                <div class="status-item metric-rose">
+                  <span class="metric-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M12 4 21 20H3L12 4Zm0 4.1L6.4 18h11.2L12 8.1ZM11 11h2v4h-2v-4Zm0 5h2v2h-2v-2Z"/></svg>
+                  </span>
+                  <span class="status-label">競合</span>
+                  <strong id="metric-conflicts">0</strong>
+                  <span id="metric-conflicts-note" class="status-note">同一ポート検出</span>
+                </div>
+                <div class="status-item metric-violet">
+                  <span class="metric-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Zm0 4.5-1.4 2.9-3.2.5 2.3 2.2-.5 3.2 2.8-1.5 2.8 1.5-.5-3.2 2.3-2.2-3.2-.5L12 7.5Z"/></svg>
+                  </span>
+                  <span class="status-label">予約済み</span>
+                  <strong id="metric-favorites">0</strong>
+                  <span id="metric-favorites-note" class="status-note">お気に入り登録</span>
+                </div>
               </div>
 
               <section id="ports-panel" class="panel table-panel">
@@ -146,8 +142,8 @@
                       <option value="UDP">UDP</option>
                     </select>
                     <select id="filter-state">
-                      <option value="Listen">リスニング</option>
                       <option value="ALL">すべての状態</option>
+                      <option value="Listen">リスニング</option>
                       <option value="Established">接続済み</option>
                       <option value="--">UDP</option>
                     </select>
@@ -176,36 +172,38 @@
             </section>
 
             <aside class="right-column">
-              <section class="panel detail-panel">
-                <div class="panel-header compact">
-                  <h2>ポート詳細</h2>
-                  <span id="detail-state" class="state-pill muted">未選択</span>
+              <section class="panel inspector-panel">
+                <div class="inspector-section detail-panel">
+                  <div class="panel-header compact">
+                    <h2>ポート詳細</h2>
+                    <span id="detail-state" class="state-pill muted">未選択</span>
+                  </div>
+                  <div id="port-detail" class="detail-body">
+                    <p class="empty-message">一覧からポートを選択してください</p>
+                  </div>
                 </div>
-                <div id="port-detail" class="detail-body">
-                  <p class="empty-message">一覧からポートを選択してください</p>
-                </div>
-              </section>
 
-              <section class="panel chart-panel">
-                <div class="panel-header compact">
-                  <h2>スキャン推移</h2>
-                  <span class="small-select">直近</span>
+                <div class="inspector-section chart-panel">
+                  <div class="panel-header compact">
+                    <h2>スキャン推移</h2>
+                    <span class="small-select">直近</span>
+                  </div>
+                  <svg id="metric-chart" class="metric-chart" viewBox="0 0 320 150" preserveAspectRatio="none"></svg>
+                  <div class="chart-legend">
+                    <span><i class="legend-blue"></i>使用中</span>
+                    <span><i class="legend-cyan"></i>監視中</span>
+                    <span><i class="legend-rose"></i>競合</span>
+                  </div>
                 </div>
-                <svg id="metric-chart" class="metric-chart" viewBox="0 0 320 150" preserveAspectRatio="none"></svg>
-                <div class="chart-legend">
-                  <span><i class="legend-blue"></i>使用中</span>
-                  <span><i class="legend-cyan"></i>監視中</span>
-                  <span><i class="legend-rose"></i>競合</span>
-                </div>
-              </section>
 
-              <section class="panel events-panel">
-                <div class="panel-header compact">
-                  <h2>最近のイベント</h2>
-                  <button id="btn-clear-events" class="link-btn">クリア</button>
-                </div>
-                <div id="event-list" class="event-list">
-                  <p class="empty-message">イベントはまだありません</p>
+                <div class="inspector-section events-panel">
+                  <div class="panel-header compact">
+                    <h2>最近のイベント</h2>
+                    <button id="btn-clear-events" class="link-btn">クリア</button>
+                  </div>
+                  <div id="event-list" class="event-list">
+                    <p class="empty-message">イベントはまだありません</p>
+                  </div>
                 </div>
               </section>
             </aside>
@@ -221,9 +219,9 @@
               </div>
             </div>
             <div class="form-row">
-              <input id="fav-port" type="number" placeholder="ポート番号" min="1" max="65535">
-              <input id="fav-label" type="text" placeholder="ラベル">
-              <input id="fav-desc" type="text" placeholder="説明（任意）">
+              <input id="fav-port" type="number" placeholder="ポート" min="1" max="65535">
+              <input id="fav-label" type="text" placeholder="名前">
+              <input id="fav-desc" type="text" placeholder="説明">
               <select id="fav-protocol">
                 <option value="TCP">TCP</option>
                 <option value="UDP">UDP</option>
@@ -259,8 +257,8 @@
               </div>
             </div>
             <div class="form-row monitor-form">
-              <input id="mon-port" type="number" placeholder="ポート番号" min="1" max="65535">
-              <input id="mon-label" type="text" placeholder="ラベル">
+              <input id="mon-port" type="number" placeholder="ポート" min="1" max="65535">
+              <input id="mon-label" type="text" placeholder="名前">
               <label><input id="mon-notify-occupied" type="checkbox" checked> 使用開始時</label>
               <label><input id="mon-notify-freed" type="checkbox" checked> 解放時</label>
               <button id="btn-add-mon" class="primary-btn">追加</button>
