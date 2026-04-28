@@ -1,7 +1,7 @@
 # Port Manager Tool
 
 Windows 向けのポート管理デスクトップアプリケーションです。  
-開発時に使用するポート番号の確認・停止・登録・監視をひとつのツールで行えます。
+開発時に使用するポート番号の確認・停止・登録・監視をひとつの軽量な作業画面で行えます。
 
 ![Electron](https://img.shields.io/badge/Electron-41.x-47848F?logo=electron&logoColor=white)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078D6?logo=windows&logoColor=white)
@@ -14,21 +14,31 @@ Windows 向けのポート管理デスクトップアプリケーションです
 - ポート番号・プロセス名・PID・状態・ローカルアドレスを表示
 - テキスト検索、プロトコル、状態によるフィルタリング
 - カラムヘッダーのクリックでソート
+- 行クリックまたは確認ボタンでポート詳細を右側インスペクターに表示
 
 ### プロセスの停止
-- 指定ポートを使用しているプロセスをワンクリックで停止
+- 待受中の TCP ポートまたは UDP ポートを使用しているプロセスを停止
 - 確認ダイアログによる誤操作防止
+- TCP の Established 接続は誤停止防止のため停止不可として表示
 
 ### お気に入りポートの登録・管理
 - よく使うポートをラベル・説明付きで登録
 - 登録ポートの現在の状態（使用中 / 空き）を自動表示
 - アプリ再起動後もデータを保持
+- 同じポート・プロトコルの重複登録を抑制
 
 ### ポート監視・デスクトップ通知
-- 指定ポートの状態を定期的にポーリング監視
+- TCP / UDP の指定ポート状態を定期的にポーリング監視
 - ポートの使用開始時・解放時にデスクトップ通知を送信
 - 監視間隔のカスタマイズ（1〜60秒）
 - ポートごとの監視ON/OFF切替
+- 同じポート・プロトコルの重複監視を抑制
+
+### 軽量ダッシュボードUI
+- 左側サイドバーで `ダッシュボード`, `ポート一覧`, `お気に入り`, `監視`, `設定` を移動
+- 上部バーに戻る / 進む / 検索 / 更新を集約
+- ダッシュボードは一覧密度を優先し、概要はコンパクトなステータス行で表示
+- 右側インスペクターにポート詳細・スキャン推移・最近のイベントを統合表示
 
 ## Screenshot
 
@@ -45,8 +55,8 @@ Windows 向けのポート管理デスクトップアプリケーションです
 
 ```bash
 # リポジトリをクローン
-git clone https://github.com/<your-username>/PortMangerTool.git
-cd PortMangerTool
+git clone https://github.com/<your-username>/PortManagerTool.git
+cd PortManagerTool
 
 # 依存パッケージのインストール
 npm install
@@ -68,7 +78,7 @@ npm start
 ## Project Structure
 
 ```
-PortMangerTool/
+PortManagerTool/
 ├── main.js              # Electron メインプロセス（IPC handler・通知・ウィンドウ管理）
 ├── preload.js           # contextBridge によるレンダラー向け API 公開
 ├── package.json
@@ -78,7 +88,7 @@ PortMangerTool/
 │   ├── store.js         # electron-store による永続化
 │   └── monitor.js       # ポーリング監視・状態変化検出
 ├── renderer/
-│   ├── index.html       # メインウィンドウ（3タブ構成）
+│   ├── index.html       # メインウィンドウ（サイドバー + ダッシュボード構成）
 │   ├── style.css        # カスタムCSS
 │   └── app.js           # レンダラー側ロジック（DOM操作・IPC呼び出し）
 └── assets/
@@ -101,10 +111,10 @@ PortMangerTool/
 │  └─ contextBridge → window.portManager              │
 ├─────────────────────────────────────────────────────┤
 │  Renderer Process (renderer/)                       │
-│  ┌─────────┐ ┌────────────┐ ┌──────┐               │
-│  │使用中    │ │お気に入り   │ │ 監視 │  ← 3タブUI    │
-│  │ポート    │ │            │ │      │               │
-│  └─────────┘ └────────────┘ └──────┘               │
+│  ┌──────────────┐ ┌──────────────────────────────┐  │
+│  │ Sidebar      │ │ Dashboard                     │  │
+│  │ Navigation   │ │ Port list + Inspector         │  │
+│  └──────────────┘ └──────────────────────────────┘  │
 └─────────────────────────────────────────────────────┘
 ```
 
