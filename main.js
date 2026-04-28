@@ -9,16 +9,16 @@ let mainWindow;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 900,
-    height: 650,
-    minWidth: 700,
-    minHeight: 500,
+    width: 1280,
+    height: 760,
+    minWidth: 900,
+    minHeight: 620,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
     },
-    backgroundColor: '#0f172a',
+    backgroundColor: '#181818',
     show: false,
   });
 

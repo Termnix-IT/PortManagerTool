@@ -8,12 +8,13 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
-      darkMode: 'class',
       theme: {
         extend: {
           colors: {
-            surface: '#1e293b',
-            base: '#0f172a',
+            ink: '#17213a',
+            muted: '#65728c',
+            line: '#e5eaf3',
+            appblue: '#2563eb',
           }
         }
       }
@@ -21,151 +22,292 @@
   </script>
   <link rel="stylesheet" href="style.css">
 </head>
-<body class="dark bg-base text-slate-200 h-screen flex flex-col overflow-hidden select-none">
-
-  <!-- Header / Tabs -->
-  <header class="flex items-center border-b border-slate-700 bg-surface px-4">
-    <h1 class="text-sm font-bold tracking-wide text-slate-400 mr-6 py-3">ポート管理</h1>
-    <nav class="flex gap-1">
-      <button class="tab-btn active" data-tab="active-ports">使用中ポート</button>
-      <button class="tab-btn" data-tab="favorites">お気に入り</button>
-      <button class="tab-btn" data-tab="monitor">監視</button>
-    </nav>
-  </header>
-
-  <!-- Tab Contents -->
-  <main class="flex-1 overflow-hidden">
-
-    <!-- ===== Active Ports Tab ===== -->
-    <section id="tab-active-ports" class="tab-content active flex flex-col h-full">
-      <!-- Filters -->
-      <div class="flex items-center gap-3 px-4 py-3 border-b border-slate-700 bg-surface/50">
-        <input id="filter-text" type="text" placeholder="ポート番号やプロセス名で検索..."
-          class="bg-slate-800 border border-slate-600 rounded px-3 py-1.5 text-sm w-56 focus:outline-none focus:border-blue-500">
-        <select id="filter-protocol" class="bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-sm">
-          <option value="ALL">すべて</option>
-          <option value="TCP">TCP</option>
-          <option value="UDP">UDP</option>
-        </select>
-        <select id="filter-state" class="bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-sm">
-          <option value="Listen">リスニング</option>
-          <option value="ALL">すべての状態</option>
-          <option value="Established">接続済み</option>
-        </select>
-        <button id="btn-refresh" class="ml-auto bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-1.5 rounded transition-colors">
-          更新
+<body>
+  <div class="app-shell" id="app-shell">
+    <aside class="sidebar">
+      <nav class="side-nav" aria-label="メイン">
+        <button class="nav-btn active" data-view="dashboard">
+          <span class="nav-icon">⌂</span>
+          <span>ダッシュボード</span>
         </button>
-      </div>
-      <!-- Table -->
-      <div class="flex-1 overflow-auto px-4 py-2">
-        <table class="w-full text-sm">
-          <thead class="sticky top-0 bg-base">
-            <tr class="text-left text-slate-400 border-b border-slate-700">
-              <th class="py-2 px-2 cursor-pointer hover:text-slate-200" data-sort="LocalPort">ポート</th>
-              <th class="py-2 px-2">プロトコル</th>
-              <th class="py-2 px-2 cursor-pointer hover:text-slate-200" data-sort="PID">PID</th>
-              <th class="py-2 px-2 cursor-pointer hover:text-slate-200" data-sort="ProcessName">プロセス</th>
-              <th class="py-2 px-2">状態</th>
-              <th class="py-2 px-2">ローカルアドレス</th>
-              <th class="py-2 px-2 text-right">操作</th>
-            </tr>
-          </thead>
-          <tbody id="ports-table-body">
-            <tr><td colspan="7" class="text-center text-slate-500 py-8">読み込み中...</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="px-4 py-2 border-t border-slate-700 text-xs text-slate-500">
-        <span id="port-count">0</span> 件
-      </div>
-    </section>
-
-    <!-- ===== Favorites Tab ===== -->
-    <section id="tab-favorites" class="tab-content flex flex-col h-full">
-      <!-- Add Favorite Form -->
-      <div class="flex items-center gap-3 px-4 py-3 border-b border-slate-700 bg-surface/50">
-        <input id="fav-port" type="number" placeholder="ポート番号" min="1" max="65535"
-          class="bg-slate-800 border border-slate-600 rounded px-3 py-1.5 text-sm w-24 focus:outline-none focus:border-blue-500">
-        <input id="fav-label" type="text" placeholder="ラベル"
-          class="bg-slate-800 border border-slate-600 rounded px-3 py-1.5 text-sm w-40 focus:outline-none focus:border-blue-500">
-        <input id="fav-desc" type="text" placeholder="説明（任意）"
-          class="bg-slate-800 border border-slate-600 rounded px-3 py-1.5 text-sm flex-1 focus:outline-none focus:border-blue-500">
-        <select id="fav-protocol" class="bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-sm">
-          <option value="TCP">TCP</option>
-          <option value="UDP">UDP</option>
-        </select>
-        <button id="btn-add-fav" class="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-1.5 rounded transition-colors">
-          + 追加
+        <button class="nav-btn" data-view="ports">
+          <span class="nav-icon">▦</span>
+          <span>ポート一覧</span>
         </button>
-      </div>
-      <!-- Favorites List -->
-      <div class="flex-1 overflow-auto px-4 py-2">
-        <table class="w-full text-sm">
-          <thead class="sticky top-0 bg-base">
-            <tr class="text-left text-slate-400 border-b border-slate-700">
-              <th class="py-2 px-2">ラベル</th>
-              <th class="py-2 px-2">ポート</th>
-              <th class="py-2 px-2">プロトコル</th>
-              <th class="py-2 px-2">説明</th>
-              <th class="py-2 px-2">状態</th>
-              <th class="py-2 px-2 text-right">操作</th>
-            </tr>
-          </thead>
-          <tbody id="favorites-table-body">
-            <tr><td colspan="6" class="text-center text-slate-500 py-8">お気に入りが登録されていません</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- ===== Monitor Tab ===== -->
-    <section id="tab-monitor" class="tab-content flex flex-col h-full">
-      <!-- Add Monitor Form -->
-      <div class="flex items-center gap-3 px-4 py-3 border-b border-slate-700 bg-surface/50">
-        <input id="mon-port" type="number" placeholder="ポート番号" min="1" max="65535"
-          class="bg-slate-800 border border-slate-600 rounded px-3 py-1.5 text-sm w-24 focus:outline-none focus:border-blue-500">
-        <input id="mon-label" type="text" placeholder="ラベル"
-          class="bg-slate-800 border border-slate-600 rounded px-3 py-1.5 text-sm w-40 focus:outline-none focus:border-blue-500">
-        <label class="flex items-center gap-1 text-xs text-slate-400">
-          <input id="mon-notify-occupied" type="checkbox" checked class="accent-blue-500"> 使用開始時
-        </label>
-        <label class="flex items-center gap-1 text-xs text-slate-400">
-          <input id="mon-notify-freed" type="checkbox" checked class="accent-blue-500"> 解放時
-        </label>
-        <button id="btn-add-mon" class="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-1.5 rounded transition-colors">
-          + 追加
+        <button class="nav-btn" data-view="favorites">
+          <span class="nav-icon">☆</span>
+          <span>お気に入り</span>
         </button>
-        <div class="ml-auto flex items-center gap-2 text-xs text-slate-400">
-          監視間隔:
-          <input id="mon-interval" type="number" min="1" max="60" value="5"
-            class="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm w-16 focus:outline-none focus:border-blue-500">
-          秒
-          <button id="btn-apply-interval" class="bg-slate-700 hover:bg-slate-600 text-white text-xs px-3 py-1 rounded transition-colors">
-            適用
+        <button class="nav-btn" data-view="monitor">
+          <span class="nav-icon">◉</span>
+          <span>監視</span>
+        </button>
+        <button class="nav-btn" data-view="settings">
+          <span class="nav-icon">⚙</span>
+          <span>設定</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-status">
+        <span class="live-dot"></span>
+        <span>サービス: 正常稼働中</span>
+        <span class="version">v1.0.0</span>
+      </div>
+      <div id="sidebar-resizer" class="sidebar-resizer" role="separator" aria-label="サイドバー幅を調整"></div>
+    </aside>
+
+    <div class="content-shell">
+      <header class="topbar">
+        <div class="titlebar-controls" aria-label="ナビゲーション">
+          <button id="btn-toggle-sidebar" class="titlebar-btn" title="サイドバーを折りたたむ" aria-label="サイドバーを折りたたむ">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v13a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 18.5v-13ZM8 5v14h9.5a.5.5 0 0 0 .5-.5v-13a.5.5 0 0 0-.5-.5H8Zm-1.5 0a.5.5 0 0 0-.5.5v13a.5.5 0 0 0 .5.5H7V5h-.5Z"/>
+            </svg>
+          </button>
+          <button id="btn-history-back" class="titlebar-btn" title="戻る" aria-label="戻る" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m10.83 12 4.58-4.59L14 6l-6 6 6 6 1.41-1.41L10.83 12Z"/>
+            </svg>
+          </button>
+          <button id="btn-history-forward" class="titlebar-btn" title="進む" aria-label="進む" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m13.17 12-4.58 4.59L10 18l6-6-6-6-1.41 1.41L13.17 12Z"/>
+            </svg>
           </button>
         </div>
-      </div>
-      <!-- Monitor List -->
-      <div class="flex-1 overflow-auto px-4 py-2">
-        <table class="w-full text-sm">
-          <thead class="sticky top-0 bg-base">
-            <tr class="text-left text-slate-400 border-b border-slate-700">
-              <th class="py-2 px-2">ラベル</th>
-              <th class="py-2 px-2">ポート</th>
-              <th class="py-2 px-2">状態</th>
-              <th class="py-2 px-2">通知</th>
-              <th class="py-2 px-2">有効</th>
-              <th class="py-2 px-2 text-right">操作</th>
-            </tr>
-          </thead>
-          <tbody id="monitor-table-body">
-            <tr><td colspan="6" class="text-center text-slate-500 py-8">監視設定がありません</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M10.5 4a6.5 6.5 0 0 1 5.14 10.48l4.44 4.44-1.42 1.42-4.44-4.44A6.5 6.5 0 1 1 10.5 4Zm0 2a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9Z"/>
+          </svg>
+          <input id="filter-text" type="text" placeholder="ポート番号、プロセス、PID、アドレスで検索...">
+          <kbd>Ctrl + K</kbd>
+        </div>
+        <div class="top-actions">
+          <button id="btn-refresh" class="icon-btn" title="更新" aria-label="更新">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.45 10.9l-1.86-.74A6 6 0 1 1 12 6c1.3 0 2.5.42 3.48 1.13L13 9.6h7V2.6l-2.35 3.75Z"/></svg>
+          </button>
+          <div class="avatar">P</div>
+        </div>
+      </header>
 
-  </main>
+      <main class="workspace">
+        <section id="view-dashboard" class="view active">
+          <div class="dashboard-grid">
+            <section class="main-column">
+              <div class="kpi-grid">
+                <article class="metric-card metric-blue">
+                  <div class="metric-icon">▤</div>
+                  <div>
+                    <p>使用中ポート</p>
+                    <strong id="metric-active">0</strong>
+                    <span id="metric-active-note">スキャン待機中</span>
+                  </div>
+                  <svg id="spark-active" class="sparkline" viewBox="0 0 120 36" preserveAspectRatio="none"></svg>
+                </article>
+                <article class="metric-card metric-cyan">
+                  <div class="metric-icon">◎</div>
+                  <div>
+                    <p>監視中</p>
+                    <strong id="metric-monitoring">0</strong>
+                    <span id="metric-monitoring-note">有効な監視</span>
+                  </div>
+                  <svg id="spark-monitoring" class="sparkline" viewBox="0 0 120 36" preserveAspectRatio="none"></svg>
+                </article>
+                <article class="metric-card metric-rose">
+                  <div class="metric-icon">△</div>
+                  <div>
+                    <p>競合</p>
+                    <strong id="metric-conflicts">0</strong>
+                    <span id="metric-conflicts-note">同一ポート検出</span>
+                  </div>
+                  <svg id="spark-conflicts" class="sparkline" viewBox="0 0 120 36" preserveAspectRatio="none"></svg>
+                </article>
+                <article class="metric-card metric-violet">
+                  <div class="metric-icon">◇</div>
+                  <div>
+                    <p>予約済み</p>
+                    <strong id="metric-favorites">0</strong>
+                    <span id="metric-favorites-note">お気に入り登録</span>
+                  </div>
+                  <svg id="spark-favorites" class="sparkline" viewBox="0 0 120 36" preserveAspectRatio="none"></svg>
+                </article>
+              </div>
+
+              <section id="ports-panel" class="panel table-panel">
+                <div class="panel-header">
+                  <div>
+                    <h2>ポート一覧</h2>
+                    <p><span id="port-count">0</span> 件を表示</p>
+                  </div>
+                  <div class="filters">
+                    <select id="filter-protocol">
+                      <option value="ALL">すべてのプロトコル</option>
+                      <option value="TCP">TCP</option>
+                      <option value="UDP">UDP</option>
+                    </select>
+                    <select id="filter-state">
+                      <option value="Listen">リスニング</option>
+                      <option value="ALL">すべての状態</option>
+                      <option value="Established">接続済み</option>
+                      <option value="--">UDP</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="table-wrap">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>予約</th>
+                        <th data-sort="LocalPort">ポート番号</th>
+                        <th data-sort="ProcessName">プロセス</th>
+                        <th>状態</th>
+                        <th data-sort="PID">PID</th>
+                        <th>監視</th>
+                        <th>操作</th>
+                      </tr>
+                    </thead>
+                    <tbody id="ports-table-body">
+                      <tr><td colspan="7" class="empty-cell">読み込み中...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </section>
+
+            <aside class="right-column">
+              <section class="panel detail-panel">
+                <div class="panel-header compact">
+                  <h2>ポート詳細</h2>
+                  <span id="detail-state" class="state-pill muted">未選択</span>
+                </div>
+                <div id="port-detail" class="detail-body">
+                  <p class="empty-message">一覧からポートを選択してください</p>
+                </div>
+              </section>
+
+              <section class="panel chart-panel">
+                <div class="panel-header compact">
+                  <h2>スキャン推移</h2>
+                  <span class="small-select">直近</span>
+                </div>
+                <svg id="metric-chart" class="metric-chart" viewBox="0 0 320 150" preserveAspectRatio="none"></svg>
+                <div class="chart-legend">
+                  <span><i class="legend-blue"></i>使用中</span>
+                  <span><i class="legend-cyan"></i>監視中</span>
+                  <span><i class="legend-rose"></i>競合</span>
+                </div>
+              </section>
+
+              <section class="panel events-panel">
+                <div class="panel-header compact">
+                  <h2>最近のイベント</h2>
+                  <button id="btn-clear-events" class="link-btn">クリア</button>
+                </div>
+                <div id="event-list" class="event-list">
+                  <p class="empty-message">イベントはまだありません</p>
+                </div>
+              </section>
+            </aside>
+          </div>
+        </section>
+
+        <section id="view-favorites" class="view">
+          <section class="panel form-panel">
+            <div class="panel-header">
+              <div>
+                <h2>お気に入り</h2>
+                <p>よく使うポートを予約済みとして管理</p>
+              </div>
+            </div>
+            <div class="form-row">
+              <input id="fav-port" type="number" placeholder="ポート番号" min="1" max="65535">
+              <input id="fav-label" type="text" placeholder="ラベル">
+              <input id="fav-desc" type="text" placeholder="説明（任意）">
+              <select id="fav-protocol">
+                <option value="TCP">TCP</option>
+                <option value="UDP">UDP</option>
+              </select>
+              <button id="btn-add-fav" class="primary-btn">追加</button>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>ラベル</th>
+                    <th>ポート</th>
+                    <th>プロトコル</th>
+                    <th>説明</th>
+                    <th>状態</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="favorites-table-body">
+                  <tr><td colspan="6" class="empty-cell">お気に入りが登録されていません</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section id="view-monitor" class="view">
+          <section class="panel form-panel">
+            <div class="panel-header">
+              <div>
+                <h2>監視</h2>
+                <p>ポートの使用開始と解放を通知</p>
+              </div>
+            </div>
+            <div class="form-row monitor-form">
+              <input id="mon-port" type="number" placeholder="ポート番号" min="1" max="65535">
+              <input id="mon-label" type="text" placeholder="ラベル">
+              <label><input id="mon-notify-occupied" type="checkbox" checked> 使用開始時</label>
+              <label><input id="mon-notify-freed" type="checkbox" checked> 解放時</label>
+              <button id="btn-add-mon" class="primary-btn">追加</button>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>ラベル</th>
+                    <th>ポート</th>
+                    <th>状態</th>
+                    <th>通知</th>
+                    <th>有効</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="monitor-table-body">
+                  <tr><td colspan="6" class="empty-cell">監視設定がありません</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section id="view-settings" class="view">
+          <section class="panel settings-panel">
+            <div class="panel-header">
+              <div>
+                <h2>設定</h2>
+                <p>監視間隔と表示設定</p>
+              </div>
+            </div>
+            <div class="settings-grid">
+              <label>
+                <span>監視間隔</span>
+                <div class="inline-control">
+                  <input id="mon-interval" type="number" min="1" max="60" value="5">
+                  <span>秒</span>
+                </div>
+              </label>
+              <button id="btn-apply-interval" class="primary-btn">適用</button>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>
