@@ -66,7 +66,14 @@ ipcMain.handle('monitors:remove', (_event, id) => store.removeMonitor(id));
 
 // Settings
 ipcMain.handle('settings:get', () => store.getSettings());
-ipcMain.handle('settings:update', (_event, data) => store.updateSettings(data));
+ipcMain.handle('settings:update', (_event, data) => {
+  const prevInterval = store.getSettings().monitorIntervalMs;
+  const settings = store.updateSettings(data);
+  if (settings.monitorIntervalMs !== prevInterval) {
+    monitor.restart();
+  }
+  return settings;
+});
 
 // --- Monitor callbacks ---
 monitor.onStatusChanged((data) => {
