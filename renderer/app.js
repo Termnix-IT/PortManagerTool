@@ -13,6 +13,7 @@ let metricHistory = [];
 let isSidebarResizing = false;
 let viewHistory = ['dashboard'];
 let viewHistoryIndex = 0;
+let categoryFilter = loadCategoryFilter();
 
 // --- DOM refs ---
 const appShell = document.getElementById('app-shell');
@@ -33,6 +34,7 @@ const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
 const btnHistoryBack = document.getElementById('btn-history-back');
 const btnHistoryForward = document.getElementById('btn-history-forward');
 const sidebarResizer = document.getElementById('sidebar-resizer');
+const categorySwitch = document.getElementById('category-switch');
 
 // --- Navigation ---
 navButtons.forEach((btn) => {
@@ -180,11 +182,14 @@ function renderPorts() {
   const proto = filterProtocol.value;
   const state = filterState.value;
 
+  renderCategoryCounts();
+
   filteredPorts = allPorts.filter((p) => {
+    if (categoryFilter !== 'ALL' && p.Category !== categoryFilter) return false;
     if (proto !== 'ALL' && p.Protocol !== proto) return false;
     if (state !== 'ALL' && p.State !== state) return false;
     if (text) {
-      const haystack = `${p.LocalPort} ${p.Protocol} ${p.ProcessName} ${p.PID} ${p.LocalAddress} ${p.RemoteAddress}`.toLowerCase();
+      const haystack = `${p.LocalPort} ${p.Protocol} ${p.ProcessName} ${p.PID} ${p.LocalAddress} ${p.RemoteAddress} ${p.CategoryLabel || ''} ${p.CommandLine || ''}`.toLowerCase();
       if (!haystack.includes(text)) return false;
     }
     return true;
@@ -204,7 +209,7 @@ function renderPorts() {
 
   if (filteredPorts.length === 0) {
     selectedPortKey = '';
-    portsTableBody.innerHTML = '<tr><td colspan="7" class="empty-cell">該当するポートがありません</td></tr>';
+    portsTableBody.innerHTML = `<tr><td colspan="7" class="empty-cell">${emptyMessageForCategory()}</td></tr>`;
     renderDetail();
     return;
   }
@@ -229,8 +234,13 @@ function renderPorts() {
           <div class="process-cell">
             <span class="process-badge">${escapeHtml(getProcessInitial(p.ProcessName))}</span>
             <span>
-              <span class="process-name">${escapeHtml(p.ProcessName || '<unknown>')}</span>
-              <span class="process-sub">${escapeHtml(p.Protocol)} ${escapeHtml(p.LocalAddress || '')}</span>
+              <span class="process-name-line">
+                <span class="process-name">${escapeHtml(p.ProcessName || '<unknown>')}</span>
+                ${renderCategoryBadge(p)}
+              </span>
+              ${p.CommandLine
+                ? `<span class="process-sub command" title="${escapeAttr(p.CommandLine)}">${escapeHtml(p.CommandLine)}</span>`
+                : `<span class="process-sub">${escapeHtml(p.Protocol)} ${escapeHtml(p.LocalAddress || '')}</span>`}
             </span>
           </div>
         </td>
@@ -300,6 +310,7 @@ function renderDetail() {
     </div>
     <div class="detail-list">
       <div class="detail-row"><span>プロセス</span><strong>${escapeHtml(selected.ProcessName || '<unknown>')}</strong></div>
+      ${selected.Category ? `<div class="detail-row"><span>分類</span><strong>${escapeHtml(categoryName(selected.Category))} / ${escapeHtml(selected.CategoryLabel)}</strong></div>` : ''}
       <div class="detail-row"><span>PID</span><code>${escapeHtml(String(selected.PID || '-'))}</code></div>
       <div class="detail-row"><span>状態</span><strong>${escapeHtml(stateLabel(selected))}</strong></div>
       <div class="detail-row"><span>ローカル</span><code>${escapeHtml(selected.LocalAddress || '-')}</code></div>
@@ -307,7 +318,70 @@ function renderDetail() {
       <div class="detail-row"><span>監視</span><strong>${getMonitorForPort(selected.LocalPort, selected.Protocol)?.enabled ? '有効' : '無効'}</strong></div>
       <div class="detail-row"><span>予約</span><strong>${getFavoriteForPort(selected.LocalPort, selected.Protocol) ? '登録済み' : '未登録'}</strong></div>
     </div>
+    ${renderCommandBlock(selected)}
   `;
+}
+
+function renderCommandBlock(port) {
+  if (!port.Category) return '';
+  if (!port.CommandLine) {
+    return '<div class="command-block empty">コマンドラインを取得できませんでした（サービスや管理者権限のプロセスの可能性があります）</div>';
+  }
+  return `<div class="command-block">${escapeHtml(port.CommandLine)}</div>`;
+}
+
+// =====================
+// Category (開発 / DB)
+// =====================
+
+function loadCategoryFilter() {
+  try {
+    const saved = localStorage.getItem('portCategoryFilter');
+    return ['ALL', 'dev', 'db'].includes(saved) ? saved : 'ALL';
+  } catch {
+    return 'ALL';
+  }
+}
+
+function setCategoryFilter(category) {
+  categoryFilter = category;
+  try {
+    localStorage.setItem('portCategoryFilter', category);
+  } catch {
+    // 保存できなくても表示は切り替える
+  }
+  categorySwitch.querySelectorAll('.segment').forEach((btn) => {
+    const active = btn.dataset.category === category;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-selected', String(active));
+  });
+  renderPorts();
+}
+
+function renderCategoryCounts() {
+  const counts = {
+    ALL: allPorts.length,
+    dev: allPorts.filter((p) => p.Category === 'dev').length,
+    db: allPorts.filter((p) => p.Category === 'db').length,
+  };
+  categorySwitch.querySelectorAll('[data-count]').forEach((el) => {
+    el.textContent = counts[el.dataset.count];
+  });
+}
+
+function renderCategoryBadge(port) {
+  if (!port.Category) return '';
+  return `<span class="category-badge ${escapeAttr(port.Category)}" title="${escapeAttr(categoryName(port.Category))}">${escapeHtml(port.CategoryLabel)}</span>`;
+}
+
+function categoryName(category) {
+  return category === 'db' ? 'DBプロセス' : '開発プロセス';
+}
+
+function emptyMessageForCategory() {
+  if (categoryFilter === 'dev') return '開発プロセスのポートは見つかりませんでした';
+  if (categoryFilter === 'db') return 'DBプロセスのポートは見つかりませんでした';
+  return '該当するポートがありません';
 }
 
 function renderMetricChart() {
@@ -563,6 +637,10 @@ document.querySelectorAll('th[data-sort]').forEach((th) => {
 filterText.addEventListener('input', renderPorts);
 filterProtocol.addEventListener('change', renderPorts);
 filterState.addEventListener('change', renderPorts);
+categorySwitch.addEventListener('click', (event) => {
+  const segment = event.target.closest('.segment');
+  if (segment) setCategoryFilter(segment.dataset.category);
+});
 portsTableBody.addEventListener('click', async (event) => {
   const row = event.target.closest('tr[data-port-key]');
   if (!row) return;
@@ -755,5 +833,6 @@ function showToast(message) {
 // --- Initial load ---
 initSidebarLayout();
 updateHistoryButtons();
+setCategoryFilter(categoryFilter);
 loadDashboard();
 loadSettings();

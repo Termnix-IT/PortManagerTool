@@ -521,6 +521,116 @@ kbd {
   max-width: 100%;
 }
 
+.segmented {
+  display: inline-flex;
+  height: 32px;
+  padding: 2px;
+  border: 1px solid #343434;
+  border-radius: 6px;
+  background: #222222;
+}
+
+.segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  color: #9a9a9a;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.segment:hover {
+  color: #e8e8e8;
+}
+
+.segment.active {
+  color: #ffffff;
+  background: #343434;
+}
+
+.segment-count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  color: #b7b7b7;
+  background: #2d2d2d;
+  font-size: 11px;
+  text-align: center;
+}
+
+.segment.active .segment-count {
+  color: #d7e6ff;
+  background: rgba(106, 163, 255, 0.22);
+}
+
+.category-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  vertical-align: 1px;
+  white-space: nowrap;
+}
+
+.category-badge.dev {
+  color: #9cc2ff;
+  background: rgba(106, 163, 255, 0.14);
+}
+
+.category-badge.db {
+  color: #c4b5fd;
+  background: rgba(167, 139, 250, 0.16);
+}
+
+.process-cell > span:last-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.process-name-line {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+/* width:0 + min-width:100% で長いコマンドラインが列幅を押し広げないようにする */
+.process-sub.command {
+  width: 0;
+  min-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: "Cascadia Mono", Consolas, monospace;
+  font-size: 10.5px;
+}
+
+.command-block {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  max-height: 140px;
+  overflow: auto;
+  color: #cfcfcf;
+  border: 1px solid #303030;
+  border-radius: 6px;
+  background: #1b1b1b;
+  font-family: "Cascadia Mono", Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.command-block.empty {
+  color: #7f7f7f;
+  font-family: inherit;
+}
+
 input,
 select {
   height: 32px;
@@ -594,6 +704,7 @@ select:focus {
   text-align: left;
   font-size: 11px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .data-table th[data-sort] {
@@ -719,6 +830,7 @@ select:focus {
   border-radius: 999px;
   font-size: 12px;
   font-weight: 800;
+  white-space: nowrap;
 }
 
 .state-pill::before {

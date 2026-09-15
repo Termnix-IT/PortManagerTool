@@ -1,4 +1,5 @@
 const { execFile } = require('child_process');
+const { classify } = require('./port-classifier');
 
 const TCP_COMMAND = `
 Get-NetTCPConnection |
@@ -11,7 +12,7 @@ ForEach-Object {
     LocalPort=$_.LocalPort;
     RemoteAddress=$_.RemoteAddress;
     RemotePort=$_.RemotePort;
-    State=$_.State;
+    State=[string]$_.State;
     PID=$_.OwningProcess;
     ProcessName=if($proc){$proc.ProcessName}else{'<unknown>'}
   }
@@ -62,7 +63,32 @@ async function scanPorts() {
     runPowerShell(TCP_COMMAND).catch(() => []),
     runPowerShell(UDP_COMMAND).catch(() => []),
   ]);
-  return [...tcp, ...udp];
+  const ports = [...tcp, ...udp];
+
+  for (const port of ports) {
+    const result = classify(port);
+    port.Category = result ? result.category : '';
+    port.CategoryLabel = result ? result.label : '';
+  }
+
+  // コマンドライン取得は重いため、開発/DBに分類されたプロセスだけに絞る
+  const pids = ports.filter((p) => p.Category).map((p) => p.PID);
+  const commandLines = await getCommandLines(pids);
+  for (const port of ports) {
+    port.CommandLine = commandLines.get(Number(port.PID)) || '';
+  }
+
+  return ports;
+}
+
+async function getCommandLines(pids) {
+  const uniquePids = [...new Set(pids.map(Number))].filter((pid) => Number.isInteger(pid) && pid > 0);
+  if (uniquePids.length === 0) return new Map();
+
+  const filter = uniquePids.map((pid) => `ProcessId=${pid}`).join(' OR ');
+  const command = `Get-CimInstance Win32_Process -Filter "${filter}" | Select-Object ProcessId, CommandLine | ConvertTo-Json -Compress`;
+  const rows = await runPowerShell(command).catch(() => []);
+  return new Map(rows.map((row) => [Number(row.ProcessId), row.CommandLine || '']));
 }
 
 function normalizeTargets(targets) {

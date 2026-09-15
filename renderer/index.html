@@ -136,6 +136,11 @@
                     <p><span id="port-count">0</span> 件を表示</p>
                   </div>
                   <div class="filters">
+                    <div id="category-switch" class="segmented" role="tablist" aria-label="表示モード">
+                      <button class="segment active" data-category="ALL" role="tab">すべて <span class="segment-count" data-count="ALL">0</span></button>
+                      <button class="segment" data-category="dev" role="tab">開発 <span class="segment-count" data-count="dev">0</span></button>
+                      <button class="segment" data-category="db" role="tab">DB <span class="segment-count" data-count="db">0</span></button>
+                    </div>
                     <select id="filter-protocol">
                       <option value="ALL">すべてのプロトコル</option>
                       <option value="TCP">TCP</option>
