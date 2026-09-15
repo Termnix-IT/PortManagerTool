@@ -14,9 +14,9 @@ jobs:
   release:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -33,6 +33,21 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
+
+      # electron-builder はインストーラーとポータブル版のアップロードを並行に行い、
+      # 下書きが無いとそれぞれが作成してしまう（v1.0.0 で下書きが2つに分かれた）。
+      # 先に1つ作っておき、両方がそこへアップロードするようにする
+      - name: Create draft release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            echo "リリース ${GITHUB_REF_NAME} は既に存在します"
+          else
+            gh release create "${GITHUB_REF_NAME}" --draft --title "${version}" --notes "" --verify-tag
+          fi
 
       - name: Build and publish (draft)
         run: npm run release

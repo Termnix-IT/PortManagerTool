@@ -13,8 +13,8 @@ jobs:
     # テストは PowerShell や Electron を偽物に差し替えているため Windows 以外でも実行できる
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
