@@ -1,0 +1,6 @@
+# 改行コードをLFに統一する（core.autocrlf の設定に関わらず作業ツリーもLF）
+* text=auto eol=lf
+
+*.png binary
+*.ico binary
+*.jpg binary

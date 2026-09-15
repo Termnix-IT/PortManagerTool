@@ -1,0 +1,4 @@
+{
+  "//": "renderer/js 配下はESモジュール。Node（テスト）からも import できるように type を宣言する",
+  "type": "module"
+}

@@ -18,8 +18,15 @@ Windows 向けのポート管理デスクトップアプリケーションです
 
 ### プロセスの停止
 - 待受中の TCP ポートまたは UDP ポートを使用しているプロセスを停止
-- 確認ダイアログによる誤操作防止
+- 通常停止 / 強制停止を選択（コンソールアプリが通常停止に応じない場合は強制停止を提案）
+- 子プロセスをまとめて停止するかを選択
+- OS の重要プロセスやこのアプリ自身は停止不可、サービスや別ユーザーのプロセスは追加確認
+- 停止直前にプロセスとポートの状態を再確認し、表示が古い場合は中止
 - TCP の Established 接続は誤停止防止のため停止不可として表示
+
+### 開発 / DB プロセスの表示モード
+- `すべて / 開発 / DB` の切替で、開発サーバーや DB が使用しているポートだけを表示
+- Vite・Django・PostgreSQL などの推定ラベルとコマンドラインを表示
 
 ### お気に入りポートの登録・管理
 - よく使うポートをラベル・説明付きで登録
@@ -65,6 +72,16 @@ npm install
 npm start
 ```
 
+## Development
+
+```bash
+npm test        # テスト（node:test）
+npm run lint    # ESLint
+```
+
+- テストは `src/` のロジックと `renderer/js/lib/` の純粋関数が対象です。PowerShell や electron-store は依存注入した偽物に差し替えるため、Electron を起動せずに実行できます。
+- 画面の変更は `npm start` で起動して目視確認してください。
+
 ## Tech Stack
 
 | 技術 | 用途 |
@@ -79,19 +96,27 @@ npm start
 
 ```
 PortManagerTool/
-├── main.js              # Electron メインプロセス（IPC handler・通知・ウィンドウ管理）
-├── preload.js           # contextBridge によるレンダラー向け API 公開
-├── package.json
-├── src/
-│   ├── port-scanner.js  # PowerShell によるポート検出
-│   ├── port-killer.js   # taskkill によるプロセス停止
-│   ├── store.js         # electron-store による永続化
-│   └── monitor.js       # ポーリング監視・状態変化検出
+├── main.js                  # Electron メインプロセス（IPC handler・通知・ウィンドウ管理）
+├── preload.js               # contextBridge によるレンダラー向け API 公開
+├── src/                     # メインプロセス側のモジュール（Node.js / CommonJS）
+│   ├── powershell.js        # PowerShell 実行の共通処理（エラーと0件の区別）
+│   ├── port-scanner.js      # ポート検出
+│   ├── port-classifier.js   # 開発 / DB プロセスの分類
+│   ├── port-killer.js       # プロセス情報の取得と taskkill
+│   ├── process-safety.js    # 停止前の危険度判定・再検証
+│   ├── kill-flow.js         # 停止の確認ダイアログと通常/強制停止の流れ
+│   ├── validation.js        # IPC 引数の検証
+│   ├── store.js             # electron-store による永続化
+│   └── monitor.js           # ポーリング監視・状態変化検出
 ├── renderer/
-│   ├── index.html       # メインウィンドウ（サイドバー + ダッシュボード構成）
-│   ├── style.css        # カスタムCSS
-│   └── app.js           # レンダラー側ロジック（DOM操作・IPC呼び出し）
-└── assets/
+│   ├── index.html           # メインウィンドウ
+│   ├── style.css
+│   └── js/                  # レンダラー（ES モジュール）
+│       ├── main.js          # エントリーポイント
+│       ├── state.js         # 画面間で共有する状態
+│       ├── lib/             # DOM に依存しない純粋関数（テスト対象）
+│       └── ui/              # 画面ごとのモジュール
+└── test/                    # node:test によるテスト
 ```
 
 ## Architecture
