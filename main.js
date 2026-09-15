@@ -1,9 +1,12 @@
-const { app, BrowserWindow, ipcMain, Notification, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, Notification, dialog, shell } = require('electron');
+const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
 // package.json の build.appId と一致させる（Windows のトースト通知はこのIDでアプリを識別する）
 const APP_ID = 'com.termnix-it.port-manager-tool';
+// package.json の build.publish と一致させる
+const RELEASES_URL = 'https://github.com/Termnix-IT/PortManagerTool/releases';
 
 // 保存先を開発時（npm start）と配布版で同じ %APPDATA%\port-manager-tool に固定する。
 // 配布版は productName からアプリ名が決まるため、固定しないとお気に入り・監視・履歴が引き継がれない。
@@ -25,7 +28,9 @@ const store = require('./src/store');
 const { createMonitor } = require('./src/monitor');
 const { createHistoryStorage } = require('./src/history-storage');
 const { createPortHistory } = require('./src/port-history');
+const { createUpdater } = require('./src/updater');
 const validation = require('./src/validation');
+const { autoUpdater } = require('electron-updater');
 
 let mainWindow;
 
@@ -34,6 +39,14 @@ const portHistory = createPortHistory({
   scanTcpListeners: portScanner.scanTcpListeners,
   getCommandLines: portScanner.getCommandLines,
   storage: createHistoryStorage({ dir: path.join(app.getPath('userData'), 'history') }),
+});
+const updater = createUpdater({
+  autoUpdater,
+  currentVersion: app.getVersion(),
+  isPackaged: app.isPackaged,
+  // electron-builder のポータブル版ランチャーが設定する
+  isPortable: Boolean(process.env.PORTABLE_EXECUTABLE_DIR),
+  hasUpdateConfig: fs.existsSync(path.join(process.resourcesPath, 'app-update.yml')),
 });
 const killFlow = createKillFlow({
   killer: createProcessKiller(),
@@ -80,6 +93,13 @@ function createWindow() {
 
 // App info
 ipcMain.handle('app:info', () => ({ name: app.getName(), version: app.getVersion() }));
+// 開くURLはrendererから受け取らず固定する
+ipcMain.handle('app:open-releases', () => shell.openExternal(RELEASES_URL));
+
+// Updates
+ipcMain.handle('updates:get-status', () => updater.getStatus());
+ipcMain.handle('updates:check', () => updater.check());
+ipcMain.handle('updates:install', () => updater.install());
 
 // Port scanning
 ipcMain.handle('ports:scan', async () => {
@@ -173,6 +193,26 @@ monitor.onStatusChanged((data) => {
   notification.show();
 });
 
+// --- Updater callbacks ---
+updater.onStatus((status) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('updates:status', status);
+  }
+  if (status.state === 'downloaded') {
+    const notification = new Notification({
+      title: 'アップデートの準備ができました',
+      body: `バージョン ${status.latestVersion} は、アプリの終了時または設定画面の「再起動して更新」でインストールされます`,
+    });
+    notification.on('click', () => {
+      if (mainWindow) {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    });
+    notification.show();
+  }
+});
+
 // --- History callbacks ---
 portHistory.on('event', (event) => {
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -198,10 +238,12 @@ app.whenReady().then(() => {
   createWindow();
   monitor.start();
   portHistory.start();
+  updater.start();
 });
 
 app.on('window-all-closed', () => {
   monitor.stop();
   portHistory.stop();
+  updater.stop();
   app.quit();
 });

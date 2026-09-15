@@ -390,6 +390,29 @@
               </label>
               <button id="btn-apply-interval" class="primary-btn">適用</button>
             </div>
+
+            <div class="panel-header settings-section-header">
+              <div>
+                <h2>アップデート</h2>
+                <p>新しいバージョンは GitHub のリリースから自動で取得します</p>
+              </div>
+            </div>
+            <div class="update-panel">
+              <div class="update-row">
+                <span class="update-label">現在のバージョン</span>
+                <strong id="update-current-version">-</strong>
+              </div>
+              <div class="update-row">
+                <span class="update-label">状態</span>
+                <span id="update-state" class="state-pill muted">-</span>
+              </div>
+              <p id="update-message" class="update-message" hidden></p>
+              <div class="update-actions">
+                <button id="btn-check-update" class="primary-btn">アップデートを確認</button>
+                <button id="btn-install-update" class="primary-btn update-install" hidden>再起動して更新</button>
+                <button id="btn-open-releases" class="link-btn">リリースページを開く</button>
+              </div>
+            </div>
           </section>
         </section>
       </main>

@@ -65,12 +65,14 @@ Windows 向けのポート管理デスクトップアプリケーションです
 
 ## Install
 
-`npm run dist` で作成した次のどちらかを使います（`dist/` に出力されます）。
+[Releases](https://github.com/Termnix-IT/PortManagerTool/releases) から次のどちらかをダウンロードします（手元でビルドする場合は `npm run dist` で `dist/` に出力されます）。
 
 | ファイル | 内容 |
 |---|---|
-| `PortManagerTool-Setup-<version>.exe` | インストーラー（ユーザー単位でインストール。インストール先の変更、デスクトップ / スタートメニューのショートカット作成に対応） |
-| `PortManagerTool-Portable-<version>.exe` | インストール不要のポータブル版 |
+| `PortManagerTool-Setup-<version>.exe` | インストーラー（ユーザー単位でインストール。インストール先の変更、デスクトップ / スタートメニューのショートカット作成に対応）。**自動アップデート対応** |
+| `PortManagerTool-Portable-<version>.exe` | インストール不要のポータブル版（自動アップデート非対応） |
+
+- インストーラー版は、起動時と 6 時間ごと（または設定画面の「アップデートを確認」）に新しいバージョンを確認し、バックグラウンドでダウンロードします。アプリの終了時、または設定画面の「再起動して更新」でインストールされます。
 
 - 実行ファイルはコード署名していないため、初回起動時に Windows SmartScreen の警告が表示されることがあります（「詳細情報」→「実行」で起動できます）。
 - 管理者権限は不要です。管理者権限で動作しているプロセス（Windows サービスとして動く DB など）は、コマンドラインの取得や停止ができない場合があります。
@@ -101,9 +103,12 @@ npm start
 npm test        # テスト（node:test）
 npm run lint    # ESLint
 npm run pack    # インストーラーを作らずに dist/win-unpacked へパッケージ（動作確認用）
-npm run dist    # インストーラーとポータブル版を dist/ に作成
+npm run dist    # インストーラーとポータブル版を dist/ に作成（アップロードしない）
 npm run icon    # アプリアイコン build/icon.png を再生成
 ```
+
+- `main` への push と Pull Request では GitHub Actions（CI）が Lint とテストを実行します。
+- リリースは `v<version>` タグの push で GitHub Actions がビルドし、Releases に下書きとしてアップロードします。手順とコード署名の設定は [docs/RELEASE.md](docs/RELEASE.md) を参照してください。
 
 - テストは `src/` のロジックと `renderer/js/lib/` の純粋関数が対象です。PowerShell や electron-store は依存注入した偽物に差し替えるため、Electron を起動せずに実行できます。
 - 画面の変更は `npm start` で起動して目視確認してください。
@@ -117,6 +122,7 @@ npm run icon    # アプリアイコン build/icon.png を再生成
 | CSS（`renderer/style.css`） | UIスタイリング（ダークテーマ）。外部リソースは読み込まない |
 | [electron-store](https://github.com/sindresorhus/electron-store) v8 | お気に入り・監視設定の永続化 |
 | [electron-builder](https://www.electron.build/) | インストーラー / ポータブル版の作成 |
+| [electron-updater](https://www.electron.build/auto-update) | GitHub Releases からの自動アップデート |
 | PowerShell / netsh / taskkill | ポート検出・予約ポート範囲の取得・プロセス停止 |
 
 ## Project Structure
@@ -136,6 +142,7 @@ PortManagerTool/
 │   ├── process-safety.js    # 停止前の危険度判定・再検証
 │   ├── kill-flow.js         # 停止の確認ダイアログと通常/強制停止の流れ
 │   ├── validation.js        # IPC 引数の検証
+│   ├── updater.js           # 自動アップデートの状態管理
 │   ├── store.js             # electron-store による永続化
 │   └── monitor.js           # ポーリング監視・状態変化検出
 ├── renderer/
@@ -148,6 +155,8 @@ PortManagerTool/
 │       └── ui/              # 画面ごとのモジュール
 ├── build/icon.png           # アプリアイコン（scripts/generate-icon.js で生成）
 ├── scripts/                 # 開発用スクリプト
+├── docs/RELEASE.md          # リリース手順・コード署名
+├── .github/workflows/       # CI（Lint・テスト）とリリース
 └── test/                    # node:test によるテスト
 ```
 

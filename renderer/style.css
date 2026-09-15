@@ -629,6 +629,58 @@ kbd {
   outline: 1px solid #4d8dff;
 }
 
+/* --- 設定: アップデート --- */
+.settings-section-header {
+  margin-top: 14px;
+  border-top: 1px solid #2d2d2d;
+}
+
+.update-panel {
+  display: grid;
+  gap: 10px;
+  padding: 0 14px 14px;
+  max-width: 560px;
+}
+
+.update-row {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  color: #d6d6d6;
+  font-size: 12px;
+}
+
+.update-row .state-pill {
+  justify-self: start;
+}
+
+.update-label {
+  color: #8a8a8a;
+}
+
+.update-message {
+  color: #9a9a9a;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.update-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.update-actions .primary-btn:disabled {
+  opacity: 0.5;
+}
+
+.update-install {
+  color: #d7e6ff;
+  border-color: rgba(106, 163, 255, 0.42);
+  background: rgba(106, 163, 255, 0.16);
+}
+
 /* --- 診断 --- */
 .diagnostics-layout {
   height: 100%;

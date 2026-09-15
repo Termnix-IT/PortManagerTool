@@ -3,6 +3,15 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('portManager', {
   // App: { name, version }
   getAppInfo: () => ipcRenderer.invoke('app:info'),
+  openReleasesPage: () => ipcRenderer.invoke('app:open-releases'),
+
+  // Updates: { state, currentVersion, latestVersion?, percent?, message?, checkedAt? }
+  getUpdateStatus: () => ipcRenderer.invoke('updates:get-status'),
+  checkForUpdates: () => ipcRenderer.invoke('updates:check'),
+  installUpdate: () => ipcRenderer.invoke('updates:install'),
+  onUpdateStatus: (callback) => {
+    ipcRenderer.on('updates:status', (_event, data) => callback(data));
+  },
 
   // Port scanning
   scanPorts: () => ipcRenderer.invoke('ports:scan'),

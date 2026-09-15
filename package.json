@@ -8,15 +8,21 @@
     "test": "node --test",
     "lint": "eslint .",
     "icon": "electron scripts/generate-icon.js",
-    "pack": "electron-builder --win --dir",
-    "dist": "electron-builder --win"
+    "pack": "electron-builder --win --dir --publish never",
+    "dist": "electron-builder --win --publish never",
+    "release": "electron-builder --win --publish always"
   },
   "keywords": [],
   "author": "Termnix-IT",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Termnix-IT/PortManagerTool.git"
+  },
   "type": "commonjs",
   "dependencies": {
-    "electron-store": "^8.2.0"
+    "electron-store": "^8.2.0",
+    "electron-updater": "6.8.9"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
@@ -38,6 +44,7 @@
       "preload.js",
       "src/**/*",
       "renderer/**/*",
+      "LICENSE",
       "package.json"
     ],
     "win": {
@@ -45,11 +52,15 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
@@ -64,6 +75,14 @@
     },
     "portable": {
       "artifactName": "PortManagerTool-Portable-${version}.${ext}"
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Termnix-IT",
+        "repo": "PortManagerTool",
+        "releaseType": "draft"
+      }
+    ]
   }
 }
