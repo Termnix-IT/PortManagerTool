@@ -5,6 +5,7 @@ const LIMITS = {
   labelMaxLength: 64,
   descriptionMaxLength: 200,
   idMaxLength: 64,
+  processNameMaxLength: 260,
   monitorIntervalMinMs: 1000,
   monitorIntervalMaxMs: 60000,
   maxPid: 0xffffffff,
@@ -143,9 +144,21 @@ function validateSettingsUpdate(value) {
   return result;
 }
 
+// 停止要求。port/protocol/processName は停止直前の再検証（別プロセスへのPID再利用検出）に使う
+function validateKillRequest(value) {
+  const data = isPlainObject(value) ? value : { pid: value };
+  return {
+    pid: validatePid(data.pid),
+    port: data.port === undefined || data.port === null ? null : validatePort(data.port),
+    protocol: validateProtocol(data.protocol),
+    processName: validateText(data.processName, { field: 'プロセス名', maxLength: LIMITS.processNameMaxLength }),
+  };
+}
+
 module.exports = {
   LIMITS,
   ValidationError,
+  validateKillRequest,
   validatePid,
   validatePort,
   validateProtocol,

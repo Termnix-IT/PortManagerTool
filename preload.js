@@ -4,8 +4,8 @@ contextBridge.exposeInMainWorld('portManager', {
   // Port scanning
   scanPorts: () => ipcRenderer.invoke('ports:scan'),
 
-  // Kill process
-  killProcess: (pid) => ipcRenderer.invoke('ports:kill', pid),
+  // Kill process: { pid, port, protocol, processName }（port等は停止直前の再検証に使う）
+  killProcess: (request) => ipcRenderer.invoke('ports:kill', request),
 
   // Favorites
   getFavorites: () => ipcRenderer.invoke('favorites:list'),

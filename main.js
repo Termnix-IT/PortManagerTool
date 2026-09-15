@@ -1,14 +1,23 @@
 const { app, BrowserWindow, ipcMain, Notification, dialog } = require('electron');
+const os = require('os');
 const path = require('path');
 const portScanner = require('./src/port-scanner');
-const portKiller = require('./src/port-killer');
+const { createProcessKiller } = require('./src/port-killer');
+const { createKillFlow } = require('./src/kill-flow');
 const store = require('./src/store');
 const { createMonitor } = require('./src/monitor');
 const validation = require('./src/validation');
 
-const monitor = createMonitor({ store, checkPorts: portScanner.checkPorts });
-
 let mainWindow;
+
+const monitor = createMonitor({ store, checkPorts: portScanner.checkPorts });
+const killFlow = createKillFlow({
+  killer: createProcessKiller(),
+  showMessageBox: (options) => dialog.showMessageBox(mainWindow, options),
+  selfPid: process.pid,
+  // Win32_Process.GetOwner の "DOMAIN\user" 形式に合わせる
+  currentUser: `${process.env.USERDOMAIN || os.hostname()}\\${os.userInfo().username}`,
+});
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -43,26 +52,15 @@ ipcMain.handle('ports:scan', async () => {
 });
 
 // Kill process
-ipcMain.handle('ports:kill', async (_event, rawPid) => {
-  let pid;
+// 確認ダイアログ・危険度判定・停止直前の再検証は src/kill-flow.js が担当する
+ipcMain.handle('ports:kill', async (_event, rawRequest) => {
+  let request;
   try {
-    pid = validation.validatePid(rawPid);
+    request = validation.validateKillRequest(rawRequest);
   } catch (err) {
     return { success: false, error: err.message };
   }
-
-  const { response } = await dialog.showMessageBox(mainWindow, {
-    type: 'warning',
-    buttons: ['キャンセル', '停止する'],
-    defaultId: 0,
-    cancelId: 0,
-    title: '確認',
-    message: `PID ${pid} のプロセスを停止しますか？`,
-  });
-  if (response === 1) {
-    return portKiller.killProcess(pid);
-  }
-  return { success: false, cancelled: true };
+  return killFlow.run(request);
 });
 
 // Favorites

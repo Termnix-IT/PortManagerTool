@@ -289,7 +289,7 @@ function renderPorts() {
         <td>
           <div class="row-actions">
             <button class="action-btn" data-action="select">確認</button>
-            ${canStop ? `<button class="action-btn kill" data-action="kill" data-pid="${toNumber(p.PID)}">停止</button>` : '<span class="action-placeholder">停止不可</span>'}
+            ${canStop ? `<button class="action-btn kill" data-action="kill" data-pid="${toNumber(p.PID)}" data-port="${toNumber(p.LocalPort)}" data-protocol="${escapeAttr(p.Protocol)}" data-process-name="${escapeAttr(p.ProcessName || '')}">停止</button>` : '<span class="action-placeholder">停止不可</span>'}
           </div>
         </td>
       </tr>
@@ -707,7 +707,7 @@ portsTableBody.addEventListener('click', async (event) => {
     return;
   }
   if (action === 'kill') {
-    await killPort(toNumber(actionButton.dataset.pid));
+    await killPort(actionButton);
   }
 });
 btnRefresh.addEventListener('click', async () => {
@@ -727,19 +727,55 @@ document.getElementById('btn-clear-events').addEventListener('click', () => {
   renderEvents();
 });
 
-async function killPort(pid) {
+async function killPort(button) {
+  const pid = toNumber(button.dataset.pid);
   if (!pid) {
     alert('PIDが取得できないため停止できません');
     return;
   }
-  const result = await window.portManager.killProcess(pid);
-  if (result.cancelled) return;
-  if (result.success) {
-    pushEvent('warn', `PID ${pid} のプロセスを停止しました`);
-    await loadDashboard();
-  } else {
-    alert('プロセスの停止に失敗しました: ' + result.error);
+
+  // Main側で停止直前の再検証（数秒かかる）を行うため、その間は操作できないようにする
+  const originalLabel = button.textContent;
+  button.disabled = true;
+  button.textContent = '確認中…';
+  let result;
+  try {
+    result = await window.portManager.killProcess({
+      pid,
+      port: toNumber(button.dataset.port) || null,
+      protocol: button.dataset.protocol || 'TCP',
+      processName: button.dataset.processName || '',
+    });
+  } finally {
+    if (button.isConnected) {
+      button.disabled = false;
+      button.textContent = originalLabel;
+    }
   }
+
+  const name = result.processName || button.dataset.processName || `PID ${pid}`;
+  if (result.success) {
+    const method = result.method === 'graceful' ? '通常停止' : '強制停止';
+    pushEvent('warn', `${name}（PID ${pid}）を${method}しました${result.tree ? '（子プロセスを含む）' : ''}`);
+    await loadDashboard();
+    return;
+  }
+  if (result.gracefulFailed) {
+    pushEvent('warn', `${name}（PID ${pid}）は通常停止では終了しませんでした`);
+    return;
+  }
+  if (result.cancelled) return;
+  if (result.stale) {
+    // 表示が古いので、Main側のダイアログで理由を伝えたうえで一覧を更新する
+    pushEvent('warn', `停止を中止しました: ${result.error}`);
+    await loadDashboard();
+    return;
+  }
+  if (result.blocked) {
+    pushEvent('warn', `${name}（PID ${pid}）は停止できないプロセスです`);
+    return;
+  }
+  alert('プロセスの停止に失敗しました: ' + result.error);
 }
 
 function selectPort(key) {

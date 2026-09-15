@@ -13,6 +13,16 @@ test('validatePid: 0・負数・小数・非数値・コマンド混入を拒否
   }
 });
 
+test('validateKillRequest: 再検証用の情報を正規化し、PID単体の旧形式も受け付ける', () => {
+  assert.deepEqual(
+    v.validateKillRequest({ pid: '301', port: 5173, protocol: 'udp', processName: 'node' }),
+    { pid: 301, port: 5173, protocol: 'UDP', processName: 'node' },
+  );
+  assert.deepEqual(v.validateKillRequest(301), { pid: 301, port: null, protocol: 'TCP', processName: '' });
+  assert.throws(() => v.validateKillRequest({ pid: 301, port: 0 }), v.ValidationError);
+  assert.throws(() => v.validateKillRequest({ pid: '1 & calc' }), v.ValidationError);
+});
+
 test('validatePort: 1〜65535の範囲のみ許可する', () => {
   assert.equal(v.validatePort(1), 1);
   assert.equal(v.validatePort('65535'), 65535);
