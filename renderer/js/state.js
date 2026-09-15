@@ -6,6 +6,7 @@ const METRIC_HISTORY_LIMIT = 16;
 // 画面間で共有する状態。更新は各モジュールから直接行う（フレームワーク不使用のため単純なオブジェクト）
 export const state = {
   ports: [],
+  excludedRanges: [],
   favorites: [],
   monitors: [],
   settings: {},
@@ -56,6 +57,7 @@ export async function refreshState() {
   }
 
   state.ports = Array.isArray(scanResult?.ports) ? scanResult.ports : [];
+  state.excludedRanges = Array.isArray(scanResult?.excludedRanges) ? scanResult.excludedRanges : [];
   state.scanErrors = scanErrors;
   state.favorites = Array.isArray(favorites) ? favorites : [];
   state.monitors = Array.isArray(monitors) ? monitors : [];

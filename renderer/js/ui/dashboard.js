@@ -50,6 +50,16 @@ export function showPortInDashboard(port) {
 export function initDashboard() {
   initPortsTable({ reload: (options = {}) => loadDashboard({ showScanning: false, ...options }) });
 
+  // 「競合」の件数から診断画面へ移動する
+  const conflictsLink = byId('metric-conflicts-link');
+  conflictsLink.addEventListener('click', () => setView('diagnostics'));
+  conflictsLink.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      setView('diagnostics');
+    }
+  });
+
   byId('btn-refresh').addEventListener('click', async () => {
     await loadDashboard();
     pushEvent('ok', 'ポート一覧を更新しました');

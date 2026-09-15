@@ -71,7 +71,14 @@ test('countCategories / calculateMetrics', () => {
     monitors: [{ enabled: true }, { enabled: false }],
     favorites: [{}],
   });
-  assert.deepEqual(metrics, { active: 4, monitoring: 1, conflicts: 1, favorites: 1 });
+  assert.deepEqual(metrics, { active: 4, monitoring: 1, conflicts: 0, favorites: 1 }, '同一プロセスの IPv4/IPv6 待受は競合ではない');
+
+  const withConflict = ports.calculateMetrics({
+    ports: [...rows, { ...rows[0], LocalAddress: '127.0.0.1', PID: 999, ProcessName: 'python' }],
+    monitors: [],
+    favorites: [],
+  });
+  assert.equal(withConflict.conflicts, 1);
 });
 
 test('getPortKey: 同じポートでもアドレス・PID・状態が違えば別の行', () => {

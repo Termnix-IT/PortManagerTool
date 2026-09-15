@@ -6,11 +6,18 @@ const { createProcessKiller } = require('./src/port-killer');
 const { createKillFlow } = require('./src/kill-flow');
 const store = require('./src/store');
 const { createMonitor } = require('./src/monitor');
+const { createHistoryStorage } = require('./src/history-storage');
+const { createPortHistory } = require('./src/port-history');
 const validation = require('./src/validation');
 
 let mainWindow;
 
 const monitor = createMonitor({ store, checkPorts: portScanner.checkPorts });
+const portHistory = createPortHistory({
+  scanTcpListeners: portScanner.scanTcpListeners,
+  getCommandLines: portScanner.getCommandLines,
+  storage: createHistoryStorage({ dir: path.join(app.getPath('userData'), 'history') }),
+});
 const killFlow = createKillFlow({
   killer: createProcessKiller(),
   showMessageBox: (options) => dialog.showMessageBox(mainWindow, options),
@@ -60,7 +67,29 @@ ipcMain.handle('ports:kill', async (_event, rawRequest) => {
   } catch (err) {
     return { success: false, error: err.message };
   }
-  return killFlow.run(request);
+  const result = await killFlow.run(request);
+  if (result.success) {
+    portHistory.recordKill({ ...result, port: request.port, protocol: request.protocol });
+  }
+  return result;
+});
+
+// History
+ipcMain.handle('history:list', (_event, options) => portHistory.list(validation.validateHistoryListOptions(options)));
+ipcMain.handle('history:clear', async () => {
+  const { response } = await dialog.showMessageBox(mainWindow, {
+    type: 'warning',
+    buttons: ['キャンセル', '削除する'],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true,
+    title: '履歴の削除',
+    message: 'ポートの使用履歴をすべて削除しますか？',
+    detail: 'この操作は元に戻せません。',
+  });
+  if (response !== 1) return { cleared: false };
+  portHistory.clear();
+  return { cleared: true };
 });
 
 // Favorites
@@ -116,13 +145,26 @@ monitor.onStatusChanged((data) => {
   notification.show();
 });
 
+// --- History callbacks ---
+portHistory.on('event', (event) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('history:event', event);
+  }
+});
+
+portHistory.on('error', (err) => {
+  console.error('[history] 待受一覧の取得に失敗しました。履歴は記録せず次回に再試行します:', err.message);
+});
+
 // --- App lifecycle ---
 app.whenReady().then(() => {
   createWindow();
   monitor.start();
+  portHistory.start();
 });
 
 app.on('window-all-closed', () => {
   monitor.stop();
+  portHistory.stop();
   app.quit();
 });

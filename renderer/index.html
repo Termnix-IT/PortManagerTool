@@ -42,6 +42,14 @@
           <span class="nav-icon">◉</span>
           <span>監視</span>
         </button>
+        <button class="nav-btn" data-view="diagnostics">
+          <span class="nav-icon">⚠</span>
+          <span>診断</span>
+        </button>
+        <button class="nav-btn" data-view="history">
+          <span class="nav-icon">↺</span>
+          <span>履歴</span>
+        </button>
         <button class="nav-btn" data-view="settings">
           <span class="nav-icon">⚙</span>
           <span>設定</span>
@@ -111,7 +119,7 @@
                   <strong id="metric-monitoring">0</strong>
                   <span id="metric-monitoring-note" class="status-note">有効な監視</span>
                 </div>
-                <div class="status-item metric-rose">
+                <div class="status-item metric-rose status-link" id="metric-conflicts-link" role="button" tabindex="0" title="診断を開く">
                   <span class="metric-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24"><path d="M12 4 21 20H3L12 4Zm0 4.1L6.4 18h11.2L12 8.1ZM11 11h2v4h-2v-4Zm0 5h2v2h-2v-2Z"/></svg>
                   </span>
@@ -282,6 +290,96 @@
                 </thead>
                 <tbody id="monitor-table-body">
                   <tr><td colspan="6" class="empty-cell">監視設定がありません</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section id="view-diagnostics" class="view">
+          <div class="diagnostics-layout">
+            <section class="panel diag-panel">
+              <div class="panel-header">
+                <div>
+                  <h2>ポートの使用可否</h2>
+                  <p>起動しようとしているポートが使えるかを確認</p>
+                </div>
+              </div>
+              <form id="port-check-form" class="form-row port-check-form">
+                <input id="check-port" type="number" placeholder="ポート" min="1" max="65535" required>
+                <select id="check-protocol">
+                  <option value="TCP">TCP</option>
+                  <option value="UDP">UDP</option>
+                </select>
+                <button type="submit" class="primary-btn">確認</button>
+              </form>
+              <div id="port-check-result" class="check-result" hidden></div>
+            </section>
+
+            <section class="panel diag-panel">
+              <div class="panel-header">
+                <div>
+                  <h2>競合</h2>
+                  <p>同じTCPポートを別々のプロセスが待ち受けているもの</p>
+                </div>
+                <span id="conflict-count" class="state-pill muted">0 件</span>
+              </div>
+              <div id="conflict-list" class="diag-list">
+                <p class="empty-message">読み込み中...</p>
+              </div>
+            </section>
+
+            <section class="panel diag-panel">
+              <div class="panel-header">
+                <div>
+                  <h2>予約ポート範囲（TCP）</h2>
+                  <p>Hyper-V / WSL / Docker 等が予約しており、空いていても使えない範囲</p>
+                </div>
+              </div>
+              <div id="excluded-range-list" class="diag-list">
+                <p class="empty-message">読み込み中...</p>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section id="view-history" class="view">
+          <section class="panel form-panel">
+            <div class="panel-header">
+              <div>
+                <h2>履歴</h2>
+                <p>ポートの使用開始・解放と、このアプリからの停止の記録（<span id="history-count">0</span> 件を表示）</p>
+              </div>
+              <div class="filters">
+                <select id="history-type">
+                  <option value="ALL">すべての種別</option>
+                  <option value="started">使用開始</option>
+                  <option value="stopped">解放</option>
+                  <option value="killed">アプリで停止</option>
+                </select>
+                <select id="history-category">
+                  <option value="ALL">すべてのプロセス</option>
+                  <option value="dev">開発プロセス</option>
+                  <option value="db">DBプロセス</option>
+                </select>
+                <input id="history-text" type="text" placeholder="ポート・プロセス・コマンドで絞り込み">
+                <button id="btn-clear-history" class="action-btn delete">履歴を削除</button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table history-table">
+                <thead>
+                  <tr>
+                    <th>日時</th>
+                    <th>種別</th>
+                    <th>ポート</th>
+                    <th>プロセス</th>
+                    <th>PID</th>
+                    <th>詳細</th>
+                  </tr>
+                </thead>
+                <tbody id="history-table-body">
+                  <tr><td colspan="6" class="empty-cell">読み込み中...</td></tr>
                 </tbody>
               </table>
             </div>

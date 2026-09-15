@@ -1,11 +1,24 @@
 const { runPowerShell } = require('./powershell');
 const { classify } = require('./port-classifier');
+const { createExcludedPortsProvider } = require('./excluded-ports');
+
+// 接続ごとに Get-Process を呼ぶと遅い（実測 2〜3秒）ため、先に PID → プロセス情報の表を作る（約1.2秒）
+const PROCESS_TABLE = `
+$procs = @{}
+Get-Process | ForEach-Object {
+  $start = $null
+  try { $start = $_.StartTime.ToUniversalTime().ToString('o') } catch {}
+  $procs[[int]$_.Id] = @{ Name = $_.ProcessName; Start = $start }
+}
+function Get-ProcName($id) { $p = $procs[[int]$id]; if ($p) { $p.Name } else { '<unknown>' } }
+function Get-ProcStart($id) { $p = $procs[[int]$id]; if ($p) { $p.Start } else { $null } }
+`.trim();
 
 const TCP_COMMAND = `
+${PROCESS_TABLE}
 Get-NetTCPConnection |
 Where-Object { $_.State -eq 'Listen' -or $_.State -eq 'Established' } |
 ForEach-Object {
-  $proc = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue;
   [PSCustomObject]@{
     Protocol='TCP';
     LocalAddress=$_.LocalAddress;
@@ -14,15 +27,15 @@ ForEach-Object {
     RemotePort=$_.RemotePort;
     State=[string]$_.State;
     PID=$_.OwningProcess;
-    ProcessName=if($proc){$proc.ProcessName}else{'<unknown>'}
+    ProcessName=Get-ProcName $_.OwningProcess
   }
 } | ConvertTo-Json -Compress
 `.trim();
 
 const UDP_COMMAND = `
+${PROCESS_TABLE}
 Get-NetUDPEndpoint |
 ForEach-Object {
-  $proc = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue;
   [PSCustomObject]@{
     Protocol='UDP';
     LocalAddress=$_.LocalAddress;
@@ -31,7 +44,22 @@ ForEach-Object {
     RemotePort=0;
     State='--';
     PID=$_.OwningProcess;
-    ProcessName=if($proc){$proc.ProcessName}else{'<unknown>'}
+    ProcessName=Get-ProcName $_.OwningProcess
+  }
+} | ConvertTo-Json -Compress
+`.trim();
+
+// 履歴用。TCPの待受のみ、プロセス開始時刻付き（PID再利用の区別と「いつから使っているか」の表示に使う）
+const TCP_LISTENERS_COMMAND = `
+${PROCESS_TABLE}
+Get-NetTCPConnection -State Listen |
+ForEach-Object {
+  [PSCustomObject]@{
+    LocalAddress=$_.LocalAddress;
+    LocalPort=$_.LocalPort;
+    PID=$_.OwningProcess;
+    ProcessName=Get-ProcName $_.OwningProcess;
+    ProcessStartedAt=Get-ProcStart $_.OwningProcess
   }
 } | ConvertTo-Json -Compress
 `.trim();
@@ -41,15 +69,15 @@ ForEach-Object {
 function buildTcpCheckCommand(ports) {
   return `
 $targets = @(${ports.join(',')})
+${PROCESS_TABLE}
 Get-NetTCPConnection -State Listen |
 Where-Object { $targets -contains $_.LocalPort } |
 ForEach-Object {
-  $proc = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue;
   [PSCustomObject]@{
     Protocol='TCP';
     LocalPort=$_.LocalPort;
     PID=$_.OwningProcess;
-    ProcessName=if($proc){$proc.ProcessName}else{'<unknown>'}
+    ProcessName=Get-ProcName $_.OwningProcess
   }
 } | ConvertTo-Json -Compress
 `.trim();
@@ -58,15 +86,15 @@ ForEach-Object {
 function buildUdpCheckCommand(ports) {
   return `
 $targets = @(${ports.join(',')})
+${PROCESS_TABLE}
 Get-NetUDPEndpoint |
 Where-Object { $targets -contains $_.LocalPort } |
 ForEach-Object {
-  $proc = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue;
   [PSCustomObject]@{
     Protocol='UDP';
     LocalPort=$_.LocalPort;
     PID=$_.OwningProcess;
-    ProcessName=if($proc){$proc.ProcessName}else{'<unknown>'}
+    ProcessName=Get-ProcName $_.OwningProcess
   }
 } | ConvertTo-Json -Compress
 `.trim();
@@ -102,7 +130,10 @@ function toErrorEntry(source, err) {
   return { source, message: err && err.message ? err.message : String(err) };
 }
 
-function createScanner({ run = runPowerShell } = {}) {
+function createScanner({
+  run = runPowerShell,
+  getExcludedPortRanges = createExcludedPortsProvider().getExcludedPortRanges,
+} = {}) {
   async function getCommandLines(pids) {
     const uniquePids = [...new Set(pids.map(Number))].filter((pid) => Number.isInteger(pid) && pid > 0);
     if (uniquePids.length === 0) return new Map();
@@ -112,15 +143,16 @@ function createScanner({ run = runPowerShell } = {}) {
 
   /**
    * 全ポートをスキャンする。
-   * TCP/UDP/コマンドラインの取得は個別に失敗しうるため、取得できた分を ports に、
-   * 失敗した分を errors に入れて返す（失敗を0件として扱わない）。
-   * @returns {Promise<{ ports: object[], errors: { source: string, message: string }[] }>}
+   * TCP/UDP/コマンドライン/予約範囲の取得は個別に失敗しうるため、取得できた分を返し、
+   * 失敗した分を errors に入れる（失敗を0件として扱わない）。
+   * @returns {Promise<{ ports: object[], excludedRanges: object[], errors: { source: string, message: string }[] }>}
    */
   async function scanPorts() {
     const errors = [];
-    const [tcp, udp] = await Promise.all([
+    const [tcp, udp, excludedRanges] = await Promise.all([
       run(TCP_COMMAND).catch((err) => { errors.push(toErrorEntry('TCP', err)); return []; }),
       run(UDP_COMMAND).catch((err) => { errors.push(toErrorEntry('UDP', err)); return []; }),
+      getExcludedPortRanges().catch((err) => { errors.push(toErrorEntry('ExcludedRanges', err)); return []; }),
     ]);
     const ports = [...tcp, ...udp];
 
@@ -141,7 +173,27 @@ function createScanner({ run = runPowerShell } = {}) {
       port.CommandLine = commandLines.get(Number(port.PID)) || '';
     }
 
-    return { ports, errors };
+    return { ports, excludedRanges, errors };
+  }
+
+  /**
+   * TCPの待受一覧（履歴用）。取得失敗時は例外を投げる（全ポート解放と誤認しないため）。
+   * @returns {Promise<{ port: number, pid: number, processName: string, processStartedAt: string|null, localAddress: string, category: string, categoryLabel: string }[]>}
+   */
+  async function scanTcpListeners() {
+    const rows = await run(TCP_LISTENERS_COMMAND);
+    return rows.map((row) => {
+      const result = classify({ Protocol: 'TCP', State: 'Listen', LocalPort: row.LocalPort, ProcessName: row.ProcessName });
+      return {
+        port: Number(row.LocalPort),
+        pid: Number(row.PID),
+        processName: row.ProcessName || '<unknown>',
+        processStartedAt: row.ProcessStartedAt || null,
+        localAddress: row.LocalAddress || '',
+        category: result ? result.category : '',
+        categoryLabel: result ? result.label : '',
+      };
+    });
   }
 
   /**
@@ -176,7 +228,7 @@ function createScanner({ run = runPowerShell } = {}) {
     return portMap;
   }
 
-  return { scanPorts, checkPorts };
+  return { scanPorts, scanTcpListeners, checkPorts, getCommandLines };
 }
 
 const defaultScanner = createScanner();
@@ -185,5 +237,7 @@ module.exports = {
   createScanner,
   normalizeTargets,
   scanPorts: defaultScanner.scanPorts,
+  scanTcpListeners: defaultScanner.scanTcpListeners,
   checkPorts: defaultScanner.checkPorts,
+  getCommandLines: defaultScanner.getCommandLines,
 };

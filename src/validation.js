@@ -6,6 +6,7 @@ const LIMITS = {
   descriptionMaxLength: 200,
   idMaxLength: 64,
   processNameMaxLength: 260,
+  historyListMax: 2000,
   monitorIntervalMinMs: 1000,
   monitorIntervalMaxMs: 60000,
   maxPid: 0xffffffff,
@@ -155,9 +156,22 @@ function validateKillRequest(value) {
   };
 }
 
+function validateHistoryListOptions(value) {
+  if (value === undefined || value === null) return {};
+  const data = requireObject(value);
+  rejectUnknownKeys(data, ['limit']);
+  if (!('limit' in data)) return {};
+  const limit = toInteger(data.limit);
+  if (!Number.isInteger(limit) || limit < 1 || limit > LIMITS.historyListMax) {
+    throw new ValidationError(`取得件数は1〜${LIMITS.historyListMax}で指定してください`);
+  }
+  return { limit };
+}
+
 module.exports = {
   LIMITS,
   ValidationError,
+  validateHistoryListOptions,
   validateKillRequest,
   validatePid,
   validatePort,

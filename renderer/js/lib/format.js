@@ -26,6 +26,13 @@ export function formatTime(date) {
   return date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
+export function formatDateTime(date) {
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleString('ja-JP', {
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
+  });
+}
+
 export function getProcessInitial(name) {
   const source = String(name || '?').replace(/[<>]/g, '').trim();
   return (source[0] || '?').toUpperCase();

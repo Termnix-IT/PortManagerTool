@@ -1,9 +1,11 @@
 // renderer のエントリーポイント。各モジュールの初期化と、画面をまたぐイベントの配線だけを行う
 import { cleanIpcErrorMessage } from './lib/format.js';
 import { initDashboard, loadDashboard, showDashboardView } from './ui/dashboard.js';
+import { initDiagnostics, loadDiagnostics } from './ui/diagnostics.js';
 import { showToast } from './ui/dom.js';
 import { initEvents, pushEvent } from './ui/events.js';
 import { initFavorites, loadFavorites } from './ui/favorites.js';
+import { initHistory, loadHistory } from './ui/history.js';
 import { initMonitors, loadMonitors } from './ui/monitors.js';
 import { getActiveView, initNavigation } from './ui/navigation.js';
 import { initSettings, loadSettings } from './ui/settings.js';
@@ -30,11 +32,15 @@ initNavigation({
   dashboard: showDashboardView,
   favorites: loadFavorites,
   monitor: loadMonitors,
+  diagnostics: loadDiagnostics,
+  history: loadHistory,
   settings: loadSettings,
 });
 initDashboard();
 initFavorites();
 initMonitors();
+initDiagnostics();
+initHistory();
 initSettings();
 
 loadDashboard();

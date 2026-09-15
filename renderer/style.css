@@ -521,6 +521,172 @@ kbd {
   max-width: 100%;
 }
 
+.status-link {
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.status-link:hover .status-label,
+.status-link:focus-visible .status-label {
+  color: #e8e8e8;
+}
+
+.status-link:focus-visible {
+  outline: 1px solid #4d8dff;
+}
+
+/* --- 診断 --- */
+.diagnostics-layout {
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  overflow: auto;
+}
+
+.diag-panel {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.diag-panel:first-child {
+  grid-column: 1 / -1;
+}
+
+.diag-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 14px 14px;
+}
+
+.diag-list .empty-message {
+  margin: 18px 0;
+}
+
+.diag-item {
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border: 1px solid #333333;
+  border-radius: 6px;
+  background: #1b1b1b;
+}
+
+.diag-item-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #eeeeee;
+  font-size: 12px;
+}
+
+.diag-processes {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: #cfcfcf;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.diag-processes .process-name {
+  display: inline;
+}
+
+.diag-processes code {
+  color: #9a9a9a;
+  font-family: "Cascadia Mono", Consolas, monospace;
+  font-size: 11px;
+}
+
+.diag-hint {
+  margin: 6px 0 0;
+  color: #9a9a9a;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.port-check-form select {
+  width: 90px;
+}
+
+.check-result {
+  margin: 0 14px 14px;
+  padding: 10px 12px;
+  border: 1px solid #333333;
+  border-radius: 6px;
+  background: #1b1b1b;
+}
+
+.check-result-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #eeeeee;
+  font-size: 13px;
+}
+
+.check-result-head .action-btn {
+  margin-left: auto;
+}
+
+.check-reasons {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: #cfcfcf;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.data-table.range-table {
+  min-width: 0;
+}
+
+/* --- 履歴 --- */
+#view-history .panel-header {
+  flex-wrap: wrap;
+}
+
+#history-text {
+  width: 240px;
+}
+
+.history-table td {
+  vertical-align: top;
+}
+
+.history-time {
+  white-space: nowrap;
+  color: #b7b7b7;
+  font-family: "Cascadia Mono", Consolas, monospace;
+  font-size: 11px;
+}
+
+.history-port {
+  white-space: nowrap;
+  color: #8ab4ff;
+  font-weight: 650;
+}
+
+.history-protocol {
+  color: #777777;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.history-table td:nth-child(4) {
+  max-width: 0;
+  width: 40%;
+}
+
+.history-detail {
+  min-width: 180px;
+  color: #9a9a9a;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
 .scan-warning {
   margin-left: 6px;
   color: #f5a524;

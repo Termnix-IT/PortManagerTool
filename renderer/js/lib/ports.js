@@ -1,5 +1,7 @@
 // ポート一覧の絞り込み・並べ替え・表示判定（DOMに依存しない）
 
+import { diagnoseConflicts } from './diagnostics.js';
+
 export const CATEGORY_FILTERS = ['ALL', 'dev', 'db'];
 
 export function getPortKey(port) {
@@ -94,16 +96,13 @@ export function isPortOccupied(ports, port, protocol) {
   return ports.some((p) => Number(p.LocalPort) === Number(port) && p.Protocol === (protocol || 'TCP') && isActivePort(p));
 }
 
+// 競合は「同じTCPポートを別々のプロセスが待ち受けている」もののみ数える（diagnostics.js）。
+// 以前は同一プロセスの IPv4/IPv6 待受も競合に数えており、誤検出が多かった
 export function calculateMetrics({ ports, monitors, favorites }) {
-  const portCounts = new Map();
-  for (const p of ports) {
-    const key = `${p.Protocol}:${p.LocalPort}`;
-    portCounts.set(key, (portCounts.get(key) || 0) + 1);
-  }
   return {
     active: ports.filter(isActivePort).length,
     monitoring: monitors.filter((m) => m.enabled).length,
-    conflicts: [...portCounts.values()].filter((count) => count > 1).length,
+    conflicts: diagnoseConflicts(ports).length,
     favorites: favorites.length,
   };
 }

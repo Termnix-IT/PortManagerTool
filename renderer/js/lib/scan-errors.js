@@ -4,6 +4,7 @@ const SOURCE_LABELS = {
   TCP: 'TCP',
   UDP: 'UDP',
   CommandLine: 'コマンドライン',
+  ExcludedRanges: '予約ポート範囲',
 };
 
 export function sourceLabel(source) {

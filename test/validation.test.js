@@ -23,6 +23,15 @@ test('validateKillRequest: 再検証用の情報を正規化し、PID単体の�
   assert.throws(() => v.validateKillRequest({ pid: '1 & calc' }), v.ValidationError);
 });
 
+test('validateHistoryListOptions: 未指定は既定値、limit は 1〜上限の整数のみ', () => {
+  assert.deepEqual(v.validateHistoryListOptions(undefined), {});
+  assert.deepEqual(v.validateHistoryListOptions({}), {});
+  assert.deepEqual(v.validateHistoryListOptions({ limit: '100' }), { limit: 100 });
+  assert.throws(() => v.validateHistoryListOptions({ limit: 0 }), v.ValidationError);
+  assert.throws(() => v.validateHistoryListOptions({ limit: v.LIMITS.historyListMax + 1 }), v.ValidationError);
+  assert.throws(() => v.validateHistoryListOptions({ limit: 10, type: 'x' }), v.ValidationError);
+});
+
 test('validatePort: 1〜65535の範囲のみ許可する', () => {
   assert.equal(v.validatePort(1), 1);
   assert.equal(v.validatePort('65535'), 65535);

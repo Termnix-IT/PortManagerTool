@@ -15,6 +15,8 @@ function fakeRun(handlers) {
   return { run, calls };
 }
 
+const noRanges = async () => [];
+
 const TCP_ROWS = [
   { Protocol: 'TCP', LocalAddress: '::', LocalPort: 5173, RemoteAddress: '::', RemotePort: 0, State: 'Listen', PID: 100, ProcessName: 'node' },
   { Protocol: 'TCP', LocalAddress: '0.0.0.0', LocalPort: 135, RemoteAddress: '0.0.0.0', RemotePort: 0, State: 'Listen', PID: 4, ProcessName: 'svchost' },
@@ -34,7 +36,7 @@ test('scanPorts: TCP/UDPを結合し、分類とコマンドラインを付与�
     }],
   ]);
 
-  const { ports, errors } = await createScanner({ run }).scanPorts();
+  const { ports, errors } = await createScanner({ run, getExcludedPortRanges: noRanges }).scanPorts();
 
   assert.deepEqual(errors, []);
   assert.equal(ports.length, 3);
@@ -52,7 +54,7 @@ test('scanPorts: 片方の取得失敗は errors に記録し、取れた分は�
     [/Win32_Process/, () => []],
   ]);
 
-  const { ports, errors } = await createScanner({ run }).scanPorts();
+  const { ports, errors } = await createScanner({ run, getExcludedPortRanges: noRanges }).scanPorts();
 
   assert.equal(ports.length, 2);
   assert.deepEqual(errors, [{ source: 'UDP', message: 'UDP failed' }]);
@@ -65,20 +67,71 @@ test('scanPorts: コマンドライン取得の失敗はポート一覧を失わ
     [/Win32_Process/, () => { throw new Error('access denied'); }],
   ]);
 
-  const { ports, errors } = await createScanner({ run }).scanPorts();
+  const { ports, errors } = await createScanner({ run, getExcludedPortRanges: noRanges }).scanPorts();
 
   assert.equal(ports.length, 2);
   assert.equal(ports[0].CommandLine, '');
   assert.deepEqual(errors, [{ source: 'CommandLine', message: 'access denied' }]);
 });
 
+test('scanPorts: 予約ポート範囲を返し、取得失敗は errors に記録する', async () => {
+  const handlers = [
+    [/Get-NetTCPConnection \|/, () => []],
+    [/Get-NetUDPEndpoint \|/, () => []],
+  ];
+  const ranges = [{ start: 55676, end: 55775, managed: false }];
+
+  const ok = await createScanner({ run: fakeRun(handlers).run, getExcludedPortRanges: async () => ranges }).scanPorts();
+  assert.deepEqual(ok.excludedRanges, ranges);
+  assert.deepEqual(ok.errors, []);
+
+  const failed = await createScanner({
+    run: fakeRun(handlers).run,
+    getExcludedPortRanges: async () => { throw new Error('netsh failed'); },
+  }).scanPorts();
+  assert.deepEqual(failed.excludedRanges, []);
+  assert.deepEqual(failed.errors, [{ source: 'ExcludedRanges', message: 'netsh failed' }]);
+});
+
+test('scanPorts: プロセス名は接続ごとの Get-Process ではなく事前に作った表から引く', async () => {
+  const { run, calls } = fakeRun([
+    [/Get-NetTCPConnection \|/, () => []],
+    [/Get-NetUDPEndpoint \|/, () => []],
+  ]);
+  await createScanner({ run, getExcludedPortRanges: noRanges }).scanPorts();
+  for (const script of calls) {
+    assert.doesNotMatch(script, /Get-Process -Id/);
+    assert.match(script, /\$procs\[\[int\]\$_\.Id\]/);
+  }
+});
+
+test('scanTcpListeners: 待受を正規化し、分類とプロセス開始時刻を付与する', async () => {
+  const { run } = fakeRun([
+    [/Get-NetTCPConnection -State Listen/, () => [
+      { LocalAddress: '::1', LocalPort: 5173, PID: 100, ProcessName: 'node', ProcessStartedAt: '2026-09-16T01:00:00.0000000Z' },
+      { LocalAddress: '0.0.0.0', LocalPort: 7070, PID: 200, ProcessName: 'AnyDesk', ProcessStartedAt: null },
+    ]],
+  ]);
+  const listeners = await createScanner({ run, getExcludedPortRanges: noRanges }).scanTcpListeners();
+  assert.deepEqual(listeners[0], {
+    port: 5173, pid: 100, processName: 'node', processStartedAt: '2026-09-16T01:00:00.0000000Z', localAddress: '::1', category: 'dev', categoryLabel: 'Vite',
+  });
+  assert.equal(listeners[1].category, '');
+  assert.equal(listeners[1].processStartedAt, null);
+});
+
+test('scanTcpListeners: 取得失敗は例外を投げる（全ポート解放と誤認しない）', async () => {
+  const { run } = fakeRun([[/Get-NetTCPConnection/, () => { throw new Error('timeout'); }]]);
+  await assert.rejects(() => createScanner({ run, getExcludedPortRanges: noRanges }).scanTcpListeners(), /timeout/);
+});
+
 test('checkPorts: 使用中/空きを PROTOCOL:port キーで返す', async () => {
   const { run } = fakeRun([
-    [/\$targets = @\(3000,5173\)\s+Get-NetTCPConnection -State Listen/, () => [{ Protocol: 'TCP', LocalPort: 5173, PID: 100, ProcessName: 'node' }]],
-    [/\$targets = @\(5353\)\s+Get-NetUDPEndpoint/, () => []],
+    [/\$targets = @\(3000,5173\)[\s\S]*Get-NetTCPConnection -State Listen/, () => [{ Protocol: 'TCP', LocalPort: 5173, PID: 100, ProcessName: 'node' }]],
+    [/\$targets = @\(5353\)[\s\S]*Get-NetUDPEndpoint/, () => []],
   ]);
 
-  const map = await createScanner({ run }).checkPorts([3000, { port: 5173 }, { port: 5353, protocol: 'udp' }]);
+  const map = await createScanner({ run, getExcludedPortRanges: noRanges }).checkPorts([3000, { port: 5173 }, { port: 5353, protocol: 'udp' }]);
 
   assert.deepEqual(map.get('TCP:3000'), { occupied: false, processName: '', pid: 0 });
   assert.deepEqual(map.get('TCP:5173'), { occupied: true, processName: 'node', pid: 100 });
@@ -89,7 +142,7 @@ test('checkPorts: -LocalPort 指定を使わない（該当なしが混ざると
   const { run, calls } = fakeRun([
     [/Get-NetTCPConnection/, () => []],
   ]);
-  await createScanner({ run }).checkPorts([3000, 59999]);
+  await createScanner({ run, getExcludedPortRanges: noRanges }).checkPorts([3000, 59999]);
   assert.doesNotMatch(calls[0], /-LocalPort/);
 });
 
@@ -98,12 +151,12 @@ test('checkPorts: 取得失敗は空き扱いにせず例外を投げる', async
     [/Get-NetTCPConnection/, () => { throw new Error('timeout'); }],
   ]);
 
-  await assert.rejects(() => createScanner({ run }).checkPorts([3000]), /timeout/);
+  await assert.rejects(() => createScanner({ run, getExcludedPortRanges: noRanges }).checkPorts([3000]), /timeout/);
 });
 
 test('checkPorts: 対象が無効値のみならPowerShellを実行しない', async () => {
   const { run, calls } = fakeRun([]);
-  const map = await createScanner({ run }).checkPorts([0, 'abc', { port: 70000 }]);
+  const map = await createScanner({ run, getExcludedPortRanges: noRanges }).checkPorts([0, 'abc', { port: 70000 }]);
   assert.equal(map.size, 0);
   assert.equal(calls.length, 0);
 });
