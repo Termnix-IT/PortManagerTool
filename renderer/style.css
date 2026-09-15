@@ -521,6 +521,13 @@ kbd {
   max-width: 100%;
 }
 
+.scan-warning {
+  margin-left: 6px;
+  color: #f5a524;
+  font-weight: 700;
+  cursor: help;
+}
+
 .segmented {
   display: inline-flex;
   height: 32px;

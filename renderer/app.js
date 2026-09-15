@@ -14,6 +14,7 @@ let isSidebarResizing = false;
 let viewHistory = ['dashboard'];
 let viewHistoryIndex = 0;
 let categoryFilter = loadCategoryFilter();
+let lastScanErrorKey = '';
 
 // --- DOM refs ---
 const appShell = document.getElementById('app-shell');
@@ -162,11 +163,49 @@ async function refreshState() {
     window.portManager.getSettings(),
   ]);
 
-  allPorts = Array.isArray(portsResult) ? portsResult : [];
+  const scanErrors = Array.isArray(portsResult?.errors) ? portsResult.errors : [];
+  // TCP/UDPの両方が取れなかった場合は「0件」ではなくエラーとして扱う
+  const failedSources = new Set(scanErrors.map((e) => e.source));
+  if (failedSources.has('TCP') && failedSources.has('UDP')) {
+    throw new Error(`ポートのスキャンに失敗しました（${scanErrors[0].message}）`);
+  }
+
+  allPorts = Array.isArray(portsResult?.ports) ? portsResult.ports : [];
+  reportScanErrors(scanErrors);
   favorites = Array.isArray(favoritesResult) ? favoritesResult : [];
   monitors = Array.isArray(monitorsResult) ? monitorsResult : [];
   settings = settingsResult || {};
   appendMetricSnapshot();
+}
+
+const SCAN_ERROR_SOURCE_LABELS = {
+  TCP: 'TCP',
+  UDP: 'UDP',
+  CommandLine: 'コマンドライン',
+};
+
+function reportScanErrors(errors) {
+  const warning = document.getElementById('scan-warning');
+  const key = errors.map((e) => `${e.source}:${e.message}`).join('|');
+
+  if (errors.length === 0) {
+    warning.hidden = true;
+    warning.textContent = '';
+    warning.title = '';
+    lastScanErrorKey = '';
+    return;
+  }
+
+  const sources = errors.map((e) => SCAN_ERROR_SOURCE_LABELS[e.source] || e.source).join(' / ');
+  warning.hidden = false;
+  warning.textContent = `一部取得失敗: ${sources}`;
+  warning.title = errors.map((e) => `${SCAN_ERROR_SOURCE_LABELS[e.source] || e.source}: ${e.message}`).join('\n');
+
+  // 画面遷移のたびに再スキャンするため、同じエラーが続く間はイベントを重ねない
+  if (key !== lastScanErrorKey) {
+    pushEvent('warn', `スキャンの一部に失敗しました（${sources}）`);
+    lastScanErrorKey = key;
+  }
 }
 
 function renderDashboard() {
@@ -610,7 +649,10 @@ async function loadSettings() {
 
 document.getElementById('btn-apply-interval').addEventListener('click', async () => {
   const sec = parseInt(document.getElementById('mon-interval').value, 10);
-  if (!sec || sec < 1) return;
+  if (!sec || sec < 1 || sec > 60) {
+    alert('監視間隔は1〜60秒で指定してください');
+    return;
+  }
   await window.portManager.updateSettings({ monitorIntervalMs: sec * 1000 });
   pushEvent('ok', `監視間隔を ${sec} 秒に変更しました`);
   showToast(`監視間隔を ${sec} 秒に変更しました`);
@@ -829,6 +871,14 @@ function showToast(message) {
     setTimeout(() => toast.remove(), 260);
   }, 2200);
 }
+
+// Main側の検証エラー等でinvokeがrejectされた場合に、握りつぶさず利用者に見せる
+window.addEventListener('unhandledrejection', (event) => {
+  const raw = event.reason && event.reason.message ? event.reason.message : String(event.reason);
+  const message = raw.replace(/^Error invoking remote method '[^']+': (?:\w*Error: )?/, '');
+  pushEvent('warn', message);
+  showToast(message);
+});
 
 // --- Initial load ---
 initSidebarLayout();

@@ -3,7 +3,10 @@ const path = require('path');
 const portScanner = require('./src/port-scanner');
 const portKiller = require('./src/port-killer');
 const store = require('./src/store');
-const monitor = require('./src/monitor');
+const { createMonitor } = require('./src/monitor');
+const validation = require('./src/validation');
+
+const monitor = createMonitor({ store, checkPorts: portScanner.checkPorts });
 
 let mainWindow;
 
@@ -31,6 +34,8 @@ function createWindow() {
 }
 
 // --- IPC Handlers ---
+// rendererからの引数はすべて src/validation.js で検証してから使う。
+// 検証エラーは例外としてrendererへ返る（invokeがrejectされる）。
 
 // Port scanning
 ipcMain.handle('ports:scan', async () => {
@@ -38,7 +43,14 @@ ipcMain.handle('ports:scan', async () => {
 });
 
 // Kill process
-ipcMain.handle('ports:kill', async (_event, pid) => {
+ipcMain.handle('ports:kill', async (_event, rawPid) => {
+  let pid;
+  try {
+    pid = validation.validatePid(rawPid);
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+
   const { response } = await dialog.showMessageBox(mainWindow, {
     type: 'warning',
     buttons: ['キャンセル', '停止する'],
@@ -55,20 +67,23 @@ ipcMain.handle('ports:kill', async (_event, pid) => {
 
 // Favorites
 ipcMain.handle('favorites:list', () => store.getFavorites());
-ipcMain.handle('favorites:add', (_event, data) => store.addFavorite(data));
-ipcMain.handle('favorites:remove', (_event, id) => store.removeFavorite(id));
+ipcMain.handle('favorites:add', (_event, data) => store.addFavorite(validation.validateFavoriteInput(data)));
+ipcMain.handle('favorites:remove', (_event, id) => store.removeFavorite(validation.validateId(id)));
 
 // Monitors
 ipcMain.handle('monitors:list', () => store.getMonitors());
-ipcMain.handle('monitors:add', (_event, data) => store.addMonitor(data));
-ipcMain.handle('monitors:update', (_event, id, data) => store.updateMonitor(id, data));
-ipcMain.handle('monitors:remove', (_event, id) => store.removeMonitor(id));
+ipcMain.handle('monitors:add', (_event, data) => store.addMonitor(validation.validateMonitorInput(data)));
+ipcMain.handle('monitors:update', (_event, id, data) => (
+  store.updateMonitor(validation.validateId(id), validation.validateMonitorUpdate(data))
+));
+ipcMain.handle('monitors:remove', (_event, id) => store.removeMonitor(validation.validateId(id)));
 
 // Settings
 ipcMain.handle('settings:get', () => store.getSettings());
 ipcMain.handle('settings:update', (_event, data) => {
+  const update = validation.validateSettingsUpdate(data);
   const prevInterval = store.getSettings().monitorIntervalMs;
-  const settings = store.updateSettings(data);
+  const settings = store.updateSettings(update);
   if (settings.monitorIntervalMs !== prevInterval) {
     monitor.restart();
   }
@@ -76,6 +91,10 @@ ipcMain.handle('settings:update', (_event, data) => {
 });
 
 // --- Monitor callbacks ---
+monitor.onError((err) => {
+  console.error('[monitor] ポート確認に失敗しました。状態は更新せず次回に再試行します:', err.message);
+});
+
 monitor.onStatusChanged((data) => {
   // Send to renderer
   if (mainWindow && !mainWindow.isDestroyed()) {

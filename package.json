@@ -4,7 +4,8 @@
   "description": "Electron-based port management tool for Windows",
   "main": "main.js",
   "scripts": {
-    "start": "npx electron ."
+    "start": "npx electron .",
+    "test": "node --test"
   },
   "keywords": [],
   "author": "",
