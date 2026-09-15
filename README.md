@@ -53,7 +53,7 @@ Windows 向けのポート管理デスクトップアプリケーションです
 - 同じポート・プロトコルの重複監視を抑制
 
 ### 軽量ダッシュボードUI
-- 左側サイドバーで `ダッシュボード`, `ポート一覧`, `お気に入り`, `監視`, `設定` を移動
+- 左側サイドバーで `ダッシュボード`, `ポート一覧`, `お気に入り`, `監視`, `診断`, `履歴`, `設定` を移動
 - 上部バーに戻る / 進む / 検索 / 更新を集約
 - ダッシュボードは一覧密度を優先し、概要はコンパクトなステータス行で表示
 - 右側インスペクターにポート詳細・スキャン推移・最近のイベントを統合表示
@@ -63,11 +63,23 @@ Windows 向けのポート管理デスクトップアプリケーションです
 <!-- スクリーンショットを追加する場合は以下のコメントを置き換えてください -->
 <!-- ![Screenshot](assets/screenshot.png) -->
 
+## Install
+
+`npm run dist` で作成した次のどちらかを使います（`dist/` に出力されます）。
+
+| ファイル | 内容 |
+|---|---|
+| `PortManagerTool-Setup-<version>.exe` | インストーラー（ユーザー単位でインストール。インストール先の変更、デスクトップ / スタートメニューのショートカット作成に対応） |
+| `PortManagerTool-Portable-<version>.exe` | インストール不要のポータブル版 |
+
+- 実行ファイルはコード署名していないため、初回起動時に Windows SmartScreen の警告が表示されることがあります（「詳細情報」→「実行」で起動できます）。
+- 管理者権限は不要です。管理者権限で動作しているプロセス（Windows サービスとして動く DB など）は、コマンドラインの取得や停止ができない場合があります。
+- お気に入り・監視・設定・履歴は `%APPDATA%\port-manager-tool` に保存されます。インストール版・ポータブル版・`npm start` で共通です。
+
 ## Requirements
 
-- **OS**: Windows 10 / 11
-- **Node.js**: v18 以上
-- **npm**: v9 以上
+- **OS**: Windows 10 / 11（x64）
+- 開発時: **Node.js** v18 以上、**npm** v9 以上
 
 ## Getting Started
 
@@ -88,6 +100,9 @@ npm start
 ```bash
 npm test        # テスト（node:test）
 npm run lint    # ESLint
+npm run pack    # インストーラーを作らずに dist/win-unpacked へパッケージ（動作確認用）
+npm run dist    # インストーラーとポータブル版を dist/ に作成
+npm run icon    # アプリアイコン build/icon.png を再生成
 ```
 
 - テストは `src/` のロジックと `renderer/js/lib/` の純粋関数が対象です。PowerShell や electron-store は依存注入した偽物に差し替えるため、Electron を起動せずに実行できます。
@@ -98,10 +113,11 @@ npm run lint    # ESLint
 | 技術 | 用途 |
 |---|---|
 | [Electron](https://www.electronjs.org/) v41 | デスクトップアプリフレームワーク |
-| Vanilla JS (CommonJS) | ビルドステップ不要の軽量構成 |
-| [Tailwind CSS](https://tailwindcss.com/) (CDN) | UIスタイリング（ダークテーマ） |
+| Vanilla JS（main: CommonJS / renderer: ES モジュール） | ビルドステップ不要の軽量構成 |
+| CSS（`renderer/style.css`） | UIスタイリング（ダークテーマ）。外部リソースは読み込まない |
 | [electron-store](https://github.com/sindresorhus/electron-store) v8 | お気に入り・監視設定の永続化 |
-| PowerShell | ポート検出（`Get-NetTCPConnection` / `Get-NetUDPEndpoint`） |
+| [electron-builder](https://www.electron.build/) | インストーラー / ポータブル版の作成 |
+| PowerShell / netsh / taskkill | ポート検出・予約ポート範囲の取得・プロセス停止 |
 
 ## Project Structure
 
@@ -130,6 +146,8 @@ PortManagerTool/
 │       ├── state.js         # 画面間で共有する状態
 │       ├── lib/             # DOM に依存しない純粋関数（テスト対象）
 │       └── ui/              # 画面ごとのモジュール
+├── build/icon.png           # アプリアイコン（scripts/generate-icon.js で生成）
+├── scripts/                 # 開発用スクリプト
 └── test/                    # node:test によるテスト
 ```
 

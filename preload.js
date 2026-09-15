@@ -1,6 +1,9 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('portManager', {
+  // App: { name, version }
+  getAppInfo: () => ipcRenderer.invoke('app:info'),
+
   // Port scanning
   scanPorts: () => ipcRenderer.invoke('ports:scan'),
 

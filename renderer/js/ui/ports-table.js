@@ -37,7 +37,7 @@ function renderRow(port) {
   const monitor = findEntryForPort(state.monitors, port.LocalPort, port.Protocol);
   const subLine = port.CommandLine
     ? `<span class="process-sub command" title="${escapeHtml(port.CommandLine)}">${escapeHtml(port.CommandLine)}</span>`
-    : `<span class="process-sub">${escapeHtml(port.Protocol)} ${escapeHtml(port.LocalAddress || '')}</span>`;
+    : `<span class="process-sub" title="${escapeHtml(port.LocalAddress || '')}">${escapeHtml(port.Protocol)} ${escapeHtml(port.LocalAddress || '')}</span>`;
   const stopAction = canStopPort(port)
     ? `<button class="action-btn kill" data-action="kill" data-pid="${toNumber(port.PID)}" ${portDataAttributes(port)}>停止</button>`
     : '<span class="action-placeholder">停止不可</span>';
@@ -53,7 +53,7 @@ function renderRow(port) {
           <span class="process-badge">${escapeHtml(getProcessInitial(port.ProcessName))}</span>
           <span>
             <span class="process-name-line">
-              <span class="process-name">${escapeHtml(port.ProcessName || '<unknown>')}</span>
+              <span class="process-name" title="${escapeHtml(port.ProcessName || '<unknown>')}">${escapeHtml(port.ProcessName || '<unknown>')}</span>
               ${renderCategoryBadge(port)}
             </span>
             ${subLine}

@@ -15,8 +15,99 @@
   --shadow: none;
 }
 
-* {
+/* --- Base reset ---
+ * 以前は Tailwind CDN の Preflight がリセットを担っていた（ユーティリティクラスは未使用）。
+ * CDN を外しても見た目が変わらないよう、このアプリが依存している分だけをここに持つ。
+ * 注意: CDN版は style.css より後にスタイルを挿入していたため、input/select/kbd の指定が
+ * Preflight に上書きされていた。このリセットは先頭に置くので、以降の指定が本来どおり効く。 */
+*,
+::before,
+::after {
   box-sizing: border-box;
+  border-width: 0;
+  border-style: solid;
+  border-color: #e5e7eb;
+}
+
+html {
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  tab-size: 4;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+h1, h2, h3, h4, h5, h6, p, ul, ol, figure, blockquote, dl, dd, hr, pre {
+  margin: 0;
+}
+
+ul, ol {
+  list-style: none;
+  padding: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: inherit;
+}
+
+code, kbd, samp, pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 1em;
+}
+
+table {
+  text-indent: 0;
+  border-color: inherit;
+  border-collapse: collapse;
+}
+
+button, input, optgroup, select, textarea {
+  font-family: inherit;
+  font-feature-settings: inherit;
+  font-variation-settings: inherit;
+  font-size: 100%;
+  font-weight: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  margin: 0;
+  padding: 0;
+}
+
+button, select {
+  text-transform: none;
+}
+
+button, input:where([type='button']), input:where([type='reset']), input:where([type='submit']) {
+  -webkit-appearance: button;
+  background-color: transparent;
+  background-image: none;
+}
+
+input::placeholder, textarea::placeholder {
+  opacity: 1;
+  color: #9ca3af;
+}
+
+button, [role='button'] {
+  cursor: pointer;
+}
+
+:disabled {
+  cursor: default;
+}
+
+img, svg, video, canvas, audio, iframe, embed, object {
+  display: block;
+  vertical-align: middle;
+}
+
+[hidden] {
+  display: none;
 }
 
 html,
@@ -47,6 +138,7 @@ button {
   height: 100vh;
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   background: var(--bg);
   transition: grid-template-columns 0.18s ease;
 }
@@ -210,6 +302,8 @@ body.is-resizing-sidebar {
 
 .content-shell {
   min-width: 0;
+  /* グリッド行の中で中身の高さに合わせて伸びると、各ビューの .table-wrap がスクロールしなくなる */
+  min-height: 0;
   display: flex;
   flex-direction: column;
   background: #181818;
@@ -774,11 +868,6 @@ kbd {
 
 /* width:0 + min-width:100% で長いコマンドラインが列幅を押し広げないようにする */
 .process-sub.command {
-  width: 0;
-  min-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   font-family: "Cascadia Mono", Consolas, monospace;
   font-size: 10.5px;
 }
@@ -860,7 +949,8 @@ select:focus {
 
 .data-table {
   width: 100%;
-  min-width: 704px;
+  /* 既定のサイドバー幅（232px）・幅1280pxのウィンドウで、ポート一覧の操作列が隠れない幅 */
+  min-width: 640px;
   border-collapse: separate;
   border-spacing: 0;
   font-size: 12px;
@@ -980,7 +1070,8 @@ select:focus {
 
 .process-name {
   display: block;
-  max-width: 150px;
+  /* 分類ラベルと並ぶため、既定サイズのウィンドウで操作列が隠れない幅に抑える（全文は title で表示） */
+  max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -988,8 +1079,15 @@ select:focus {
   font-weight: 600;
 }
 
+/* width:0 + min-width:100% で、長いコマンドラインや IPv6 アドレス（fe80::…%12 等、改行できない文字列）が
+ * 列幅を押し広げないようにする。全文は title 属性で表示する */
 .process-sub {
   display: block;
+  width: 0;
+  min-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: #8a8a8a;
   font-size: 11px;
 }

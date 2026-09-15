@@ -1,6 +1,23 @@
 const { app, BrowserWindow, ipcMain, Notification, dialog } = require('electron');
 const os = require('os');
 const path = require('path');
+
+// package.json の build.appId と一致させる（Windows のトースト通知はこのIDでアプリを識別する）
+const APP_ID = 'com.termnix-it.port-manager-tool';
+
+// 保存先を開発時（npm start）と配布版で同じ %APPDATA%\port-manager-tool に固定する。
+// 配布版は productName からアプリ名が決まるため、固定しないとお気に入り・監視・履歴が引き継がれない。
+// --user-data-dir 指定時（動作確認用）はそちらを優先する。electron-store は require 時に保存先を決めるため、
+// この処理は src/store の require より前に置くこと。
+if (!app.commandLine.hasSwitch('user-data-dir')) {
+  app.setPath('userData', path.join(app.getPath('appData'), 'port-manager-tool'));
+}
+
+// 2つ目の起動は既存のウィンドウを前面に出して終了する（履歴ファイルへの同時書き込みを防ぐ）
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+if (!hasSingleInstanceLock) {
+  app.quit();
+}
 const portScanner = require('./src/port-scanner');
 const { createProcessKiller } = require('./src/port-killer');
 const { createKillFlow } = require('./src/kill-flow');
@@ -36,6 +53,8 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      // preload は contextBridge と ipcRenderer のみを使うため sandbox で動作する
+      sandbox: true,
     },
     backgroundColor: '#181818',
     show: false,
@@ -43,6 +62,12 @@ function createWindow() {
 
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   mainWindow.setMenuBarVisibility(false);
+
+  // アプリ内のページ以外へ遷移させない・新しいウィンドウを開かせない
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (url !== mainWindow.webContents.getURL()) event.preventDefault();
+  });
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
@@ -52,6 +77,9 @@ function createWindow() {
 // --- IPC Handlers ---
 // rendererからの引数はすべて src/validation.js で検証してから使う。
 // 検証エラーは例外としてrendererへ返る（invokeがrejectされる）。
+
+// App info
+ipcMain.handle('app:info', () => ({ name: app.getName(), version: app.getVersion() }));
 
 // Port scanning
 ipcMain.handle('ports:scan', async () => {
@@ -157,7 +185,16 @@ portHistory.on('error', (err) => {
 });
 
 // --- App lifecycle ---
+app.on('second-instance', () => {
+  if (!mainWindow) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+});
+
 app.whenReady().then(() => {
+  if (!hasSingleInstanceLock) return;
+  app.setAppUserModelId(APP_ID);
   createWindow();
   monitor.start();
   portHistory.start();

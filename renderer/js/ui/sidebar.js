@@ -63,4 +63,8 @@ export function initSidebar() {
   const savedWidth = Number(readStorage('sidebarWidth'));
   if (savedWidth) setWidth(savedWidth);
   setCollapsed(readStorage('sidebarCollapsed') === 'true');
+
+  window.portManager.getAppInfo().then((info) => {
+    byId('app-version').textContent = `v${info.version}`;
+  });
 }

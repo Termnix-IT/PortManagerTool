@@ -3,23 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.tailwindcss.com 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+  <!-- 外部リソースは読み込まない。style-src の 'unsafe-inline' は JS からの style 操作（サイドバー幅など）用 -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>ポート管理ツール</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            ink: '#17213a',
-            muted: '#65728c',
-            line: '#e5eaf3',
-            appblue: '#2563eb',
-          }
-        }
-      }
-    }
-  </script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -59,7 +45,7 @@
       <div class="sidebar-status">
         <span class="live-dot"></span>
         <span>サービス: 正常稼働中</span>
-        <span class="version">v1.0.0</span>
+        <span id="app-version" class="version"></span>
       </div>
       <div id="sidebar-resizer" class="sidebar-resizer" role="separator" aria-label="サイドバー幅を調整"></div>
     </aside>
