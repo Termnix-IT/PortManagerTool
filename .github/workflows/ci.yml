@@ -9,8 +9,8 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    # テストは PowerShell や Electron を偽物に差し替えているため Windows 以外でも実行できる
+  web:
+    # renderer の純粋関数のテストと ESLint は Windows 以外でも実行できる
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -19,8 +19,20 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-        env:
-          # テストと Lint には Electron 本体は不要
-          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
       - run: npm run lint
       - run: npm test
+
+  rust:
+    # Win32 API を使うため Windows で実行する（テストは実際のソケットや子プロセスを使う）
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
+      - run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
+      - run: cargo test --manifest-path src-tauri/Cargo.toml --locked

@@ -3,7 +3,8 @@
 Windows 向けのポート管理デスクトップアプリケーションです。  
 開発時に使用するポート番号の確認・停止・登録・監視をひとつの軽量な作業画面で行えます。
 
-![Electron](https://img.shields.io/badge/Electron-41.x-47848F?logo=electron&logoColor=white)
+![Tauri](https://img.shields.io/badge/Tauri-2.x-24C8DB?logo=tauri&logoColor=white)
+![Rust](https://img.shields.io/badge/Rust-2021-000000?logo=rust&logoColor=white)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078D6?logo=windows&logoColor=white)
 ![License](https://img.shields.io/badge/License-ISC-blue)
 
@@ -65,118 +66,126 @@ Windows 向けのポート管理デスクトップアプリケーションです
 
 ## Install
 
-[Releases](https://github.com/Termnix-IT/PortManagerTool/releases) から次のどちらかをダウンロードします（手元でビルドする場合は `npm run dist` で `dist/` に出力されます）。
+[Releases](https://github.com/Termnix-IT/PortManagerTool/releases) から次のどちらかをダウンロードします（手元でビルドする場合は `npm run build` で `src-tauri/target/release/` に出力されます）。
 
 | ファイル | 内容 |
 |---|---|
-| `PortManagerTool-Setup-<version>.exe` | インストーラー（ユーザー単位でインストール。インストール先の変更、デスクトップ / スタートメニューのショートカット作成に対応）。**自動アップデート対応** |
-| `PortManagerTool-Portable-<version>.exe` | インストール不要のポータブル版（自動アップデート非対応） |
+| `PortManagerTool-Setup-<version>.exe` | インストーラー（ユーザー単位でインストール。インストール先の変更、スタートメニュー / デスクトップのショートカット作成に対応）。**自動アップデート対応** |
+| `PortManagerTool-Portable-<version>.exe` | インストール不要の単体の実行ファイル（自動アップデート非対応） |
 
-- インストーラー版は、起動時と 6 時間ごと（または設定画面の「アップデートを確認」）に新しいバージョンを確認し、バックグラウンドでダウンロードします。アプリの終了時、または設定画面の「再起動して更新」でインストールされます。
-
+- インストーラー版は、起動 15 秒後と 6 時間ごと（または設定画面の「アップデートを確認」）に新しいバージョンを確認し、バックグラウンドでダウンロードします。アプリの終了時、または設定画面の「再起動して更新」でインストールされます。
+- 画面の表示には Microsoft Edge WebView2 ランタイムを使います。Windows 11 と最新の Windows 10 には標準で入っています。入っていない環境では、インストーラー版はインストール時に自動で導入し、ポータブル版は起動できません。
 - 実行ファイルはコード署名していないため、初回起動時に Windows SmartScreen の警告が表示されることがあります（「詳細情報」→「実行」で起動できます）。
 - 管理者権限は不要です。管理者権限で動作しているプロセス（Windows サービスとして動く DB など）は、コマンドラインの取得や停止ができない場合があります。
 - お気に入り・監視・設定・履歴は `%APPDATA%\port-manager-tool` に保存されます。インストール版・ポータブル版・`npm start` で共通です。
 
+### v1.0.0（Electron 版）からの移行
+
+v1.0.0 は Electron で作られており、Rust（Tauri）版へは自動アップデートで移行できません。Windows の「設定 → アプリ」で旧版をアンインストールしてから、新しいインストーラーで導入してください（両方のショートカット名が同じため、先に旧版を削除します）。お気に入り・監視・設定・履歴は同じ保存先を使うため引き継がれます。サイドバーの幅や一覧の表示モードなど画面の状態は引き継がれず、初期状態に戻ります。
+
 ## Requirements
 
 - **OS**: Windows 10 / 11（x64）
-- 開発時: **Node.js** v18 以上、**npm** v9 以上
+- 開発時: **Node.js** v18 以上（npm を含む）、**Rust** 1.85 以上（`rustup` の stable、MSVC ツールチェーン）、Visual Studio Build Tools（C++ によるデスクトップ開発）
 
 ## Getting Started
 
 ```bash
 # リポジトリをクローン
-git clone https://github.com/<your-username>/PortManagerTool.git
+git clone https://github.com/Termnix-IT/PortManagerTool.git
 cd PortManagerTool
 
-# 依存パッケージのインストール
+# 依存パッケージ（Tauri CLI と Lint 用）のインストール
 npm install
 
-# アプリの起動
+# アプリの起動（初回は Rust のビルドに数分かかります）
 npm start
 ```
 
 ## Development
 
 ```bash
-npm test        # テスト（node:test）
-npm run lint    # ESLint
-npm run pack    # インストーラーを作らずに dist/win-unpacked へパッケージ（動作確認用）
-npm run dist    # インストーラーとポータブル版を dist/ に作成（アップロードしない）
-npm run icon    # アプリアイコン build/icon.png を再生成
+npm test            # renderer の純粋関数のテスト（node:test）
+npm run test:rust   # Rust のテスト（cargo test）
+npm run lint        # ESLint
+npm run lint:rust   # cargo fmt --check と clippy（警告をエラーとして扱う）
+npm run build       # インストーラーと実行ファイルを src-tauri/target/release/ に作成（アップロードしない）
+npm run icon        # build/icon.svg から src-tauri/icons/ のアイコンを再生成
 ```
 
-- `main` への push と Pull Request では GitHub Actions（CI）が Lint とテストを実行します。
-- リリースは `v<version>` タグの push で GitHub Actions がビルドし、Releases に下書きとしてアップロードします。手順とコード署名の設定は [docs/RELEASE.md](docs/RELEASE.md) を参照してください。
-
-- テストは `src/` のロジックと `renderer/js/lib/` の純粋関数が対象です。PowerShell や electron-store は依存注入した偽物に差し替えるため、Electron を起動せずに実行できます。
-- 画面の変更は `npm start` で起動して目視確認してください。
+- `main` への push と Pull Request では GitHub Actions（CI）が Lint とテスト（JavaScript と Rust）を実行します。
+- リリースは `v<version>` タグの push で GitHub Actions がビルドし、Releases に下書きとしてアップロードします。手順と署名の設定は [docs/RELEASE.md](docs/RELEASE.md) を参照してください。
+- Rust のテストは、検証・分類・停止の判断・監視・履歴などのロジックを偽物のシステム情報やダイアログに差し替えて確認します。ポート一覧やプロセス情報を取得する Win32 API の部分は、テスト中に実際のソケットや子プロセスを作って確認します。
+- 画面の変更は `npm start` で起動して目視確認してください。利用者の履歴・設定を汚さずに確認したい場合は、`npx tauri dev -- -- --user-data-dir=<一時フォルダ>` のように保存先を指定して起動します（この指定がある間は多重起動の防止も無効になります）。
 
 ## Tech Stack
 
 | 技術 | 用途 |
 |---|---|
-| [Electron](https://www.electronjs.org/) v41 | デスクトップアプリフレームワーク |
-| Vanilla JS（main: CommonJS / renderer: ES モジュール） | ビルドステップ不要の軽量構成 |
+| [Tauri](https://tauri.app/) v2 | デスクトップアプリフレームワーク（WebView2 で画面を表示） |
+| Rust（`src-tauri/`） | ポート検出・プロセス停止・監視・履歴・保存など、画面以外のすべての処理 |
+| [windows](https://github.com/microsoft/windows-rs) crate | Win32 API（`GetExtendedTcpTable` / `GetExtendedUdpTable`、プロセス情報、TaskDialog など） |
+| Vanilla JS（ES モジュール） | 画面（ビルドステップなし） |
 | CSS（`renderer/style.css`） | UIスタイリング（ダークテーマ）。外部リソースは読み込まない |
-| [electron-store](https://github.com/sindresorhus/electron-store) v8 | お気に入り・監視設定の永続化 |
-| [electron-builder](https://www.electron.build/) | インストーラー / ポータブル版の作成 |
-| [electron-updater](https://www.electron.build/auto-update) | GitHub Releases からの自動アップデート |
-| PowerShell / netsh / taskkill | ポート検出・予約ポート範囲の取得・プロセス停止 |
+| [tauri-plugin-updater](https://v2.tauri.app/plugin/updater/) | GitHub Releases の `latest.json` を使った自動アップデート |
+| netsh / taskkill | 予約ポート範囲の取得・プロセス停止 |
 
 ## Project Structure
 
 ```
 PortManagerTool/
-├── main.js                  # Electron メインプロセス（IPC handler・通知・ウィンドウ管理）
-├── preload.js               # contextBridge によるレンダラー向け API 公開
-├── src/                     # メインプロセス側のモジュール（Node.js / CommonJS）
-│   ├── powershell.js        # PowerShell 実行の共通処理（エラーと0件の区別）
-│   ├── port-scanner.js      # ポート検出
-│   ├── excluded-ports.js    # Windows の予約ポート範囲の取得
-│   ├── port-history.js      # ポートの使用開始 / 解放の検出
-│   ├── history-storage.js   # 履歴の保存（JSONL）
-│   ├── port-classifier.js   # 開発 / DB プロセスの分類
-│   ├── port-killer.js       # プロセス情報の取得と taskkill
-│   ├── process-safety.js    # 停止前の危険度判定・再検証
-│   ├── kill-flow.js         # 停止の確認ダイアログと通常/強制停止の流れ
-│   ├── validation.js        # IPC 引数の検証
-│   ├── updater.js           # 自動アップデートの状態管理
-│   ├── store.js             # electron-store による永続化
-│   └── monitor.js           # ポーリング監視・状態変化検出
+├── src-tauri/                 # Rust（Tauri）側
+│   ├── tauri.conf.json        # アプリ設定（CSP・インストーラー・アップデート）
+│   ├── capabilities/          # 画面に許可する Tauri の権限
+│   ├── icons/                 # アプリアイコン（npm run icon で生成）
+│   └── src/
+│       ├── lib.rs             # 起動処理（ウィンドウ・監視/履歴のループ・アップデート・多重起動の防止）
+│       ├── commands.rs        # 画面から呼ぶコマンド（引数は validation.rs で検証）
+│       ├── validation.rs      # コマンド引数の検証
+│       ├── scanner.rs         # ポート検出
+│       ├── excluded_ports.rs  # Windows の予約ポート範囲の取得
+│       ├── classifier.rs      # 開発 / DB プロセスの分類
+│       ├── port_history.rs    # ポートの使用開始 / 解放の検出
+│       ├── history_storage.rs # 履歴の保存（JSONL）
+│       ├── process_safety.rs  # 停止前の危険度判定・再検証
+│       ├── kill_flow.rs       # 停止の確認ダイアログと通常/強制停止の流れ
+│       ├── killer.rs          # プロセス情報の取得と taskkill
+│       ├── monitor.rs         # ポーリング監視・状態変化検出
+│       ├── store.rs           # お気に入り・監視・設定の保存（config.json）
+│       ├── updater.rs         # 自動アップデートの状態管理
+│       ├── notify.rs          # デスクトップ通知
+│       └── win/               # Win32 API の呼び出し
 ├── renderer/
-│   ├── index.html           # メインウィンドウ
+│   ├── index.html             # メインウィンドウ
 │   ├── style.css
-│   └── js/                  # レンダラー（ES モジュール）
-│       ├── main.js          # エントリーポイント
-│       ├── state.js         # 画面間で共有する状態
-│       ├── lib/             # DOM に依存しない純粋関数（テスト対象）
-│       └── ui/              # 画面ごとのモジュール
-├── build/icon.png           # アプリアイコン（scripts/generate-icon.js で生成）
-├── scripts/                 # 開発用スクリプト
-├── docs/RELEASE.md          # リリース手順・コード署名
-├── .github/workflows/       # CI（Lint・テスト）とリリース
-└── test/                    # node:test によるテスト
+│   └── js/                    # 画面（ES モジュール）
+│       ├── bridge.js          # window.portManager（Rust のコマンドとイベントへの橋渡し）
+│       ├── main.js            # エントリーポイント
+│       ├── state.js           # 画面間で共有する状態
+│       ├── lib/               # DOM に依存しない純粋関数（テスト対象）
+│       └── ui/                # 画面ごとのモジュール
+├── build/icon.svg             # アプリアイコンの元画像
+├── docs/RELEASE.md            # リリース手順・署名
+├── .github/workflows/         # CI（Lint・テスト）とリリース
+└── test/renderer/             # node:test によるテスト
 ```
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  Main Process (main.js)                             │
+│  Rust (src-tauri/)                                  │
 │  ┌──────────────┐  ┌────────────┐  ┌─────────────┐  │
-│  │ port-scanner │  │ port-killer│  │   monitor   │  │
-│  │ (PowerShell) │  │ (taskkill) │  │ (setInterval│  │
+│  │   scanner    │  │ kill_flow  │  │   monitor   │  │
+│  │ (Win32 API)  │  │ (taskkill) │  │  (thread)   │  │
 │  └──────────────┘  └────────────┘  └─────────────┘  │
-│  ┌──────────────┐                                   │
-│  │    store     │  ← electron-store (JSON)          │
-│  └──────────────┘                                   │
-├─────────────── IPC (invoke/handle) ─────────────────┤
-│  Preload (preload.js)                               │
-│  └─ contextBridge → window.portManager              │
+│  ┌──────────────┐  ┌────────────┐                   │
+│  │    store     │  │port_history│ ← JSON / JSONL    │
+│  └──────────────┘  └────────────┘                   │
+├──────── Tauri IPC (invoke / event) ─────────────────┤
+│  renderer/js/bridge.js → window.portManager         │
 ├─────────────────────────────────────────────────────┤
-│  Renderer Process (renderer/)                       │
+│  WebView2 (renderer/)                               │
 │  ┌──────────────┐ ┌──────────────────────────────┐  │
 │  │ Sidebar      │ │ Dashboard                     │  │
 │  │ Navigation   │ │ Port list + Inspector         │  │
