@@ -1,16 +1,17 @@
 {
   "name": "port-manager-tool",
   "version": "1.0.0",
-  "description": "Electron-based port management tool for Windows",
-  "main": "main.js",
+  "description": "Port management tool for Windows (Tauri / Rust)",
+  "private": true,
   "scripts": {
-    "start": "electron .",
+    "start": "tauri dev",
+    "tauri": "tauri",
     "test": "node --test",
+    "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml",
     "lint": "eslint .",
-    "icon": "electron scripts/generate-icon.js",
-    "pack": "electron-builder --win --dir --publish never",
-    "dist": "electron-builder --win --publish never",
-    "release": "electron-builder --win --publish always"
+    "lint:rust": "cargo fmt --manifest-path src-tauri/Cargo.toml --check && cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings",
+    "build": "tauri build",
+    "icon": "tauri icon build/icon.svg --output src-tauri/icons"
   },
   "keywords": [],
   "author": "Termnix-IT",
@@ -20,69 +21,10 @@
     "url": "https://github.com/Termnix-IT/PortManagerTool.git"
   },
   "type": "commonjs",
-  "dependencies": {
-    "electron-store": "^8.2.0",
-    "electron-updater": "6.8.9"
-  },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
-    "electron": "41.10.7",
-    "electron-builder": "26.15.3",
+    "@tauri-apps/cli": "2.12.4",
     "eslint": "^9.39.5",
     "globals": "^17.12.0"
-  },
-  "build": {
-    "appId": "com.termnix-it.port-manager-tool",
-    "productName": "Port Manager Tool",
-    "copyright": "Copyright © 2026 Termnix-IT",
-    "directories": {
-      "output": "dist",
-      "buildResources": "build"
-    },
-    "files": [
-      "main.js",
-      "preload.js",
-      "src/**/*",
-      "renderer/**/*",
-      "LICENSE",
-      "package.json"
-    ],
-    "win": {
-      "icon": "build/icon.png",
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    },
-    "nsis": {
-      "oneClick": false,
-      "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "Port Manager Tool",
-      "artifactName": "PortManagerTool-Setup-${version}.${ext}"
-    },
-    "portable": {
-      "artifactName": "PortManagerTool-Portable-${version}.${ext}"
-    },
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "Termnix-IT",
-        "repo": "PortManagerTool",
-        "releaseType": "draft"
-      }
-    ]
   }
 }

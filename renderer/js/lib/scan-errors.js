@@ -1,6 +1,7 @@
 // ports:scan の errors の解釈（DOMに依存しない）
 
 const SOURCE_LABELS = {
+  Process: 'プロセス一覧',
   TCP: 'TCP',
   UDP: 'UDP',
   CommandLine: 'コマンドライン',

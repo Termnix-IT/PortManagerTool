@@ -9,8 +9,9 @@ CLAUDE.md
 AGENTS.md
 .claude/
 
-# Electron
-*.asar
+# Tauri（src-tauri/gen/schemas はビルド時に生成される）
+src-tauri/target/
+src-tauri/gen/
 
 # OS
 Thumbs.db

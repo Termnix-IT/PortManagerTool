@@ -32,13 +32,10 @@ test('getProcessInitial', () => {
   assert.equal(format.getProcessInitial(''), '?');
 });
 
-test('cleanIpcErrorMessage: invoke の reject から本文だけを取り出す', () => {
-  assert.equal(
-    format.cleanIpcErrorMessage("Error invoking remote method 'favorites:add': ValidationError: ポート番号は1〜65535の整数で指定してください"),
-    'ポート番号は1〜65535の整数で指定してください',
-  );
-  assert.equal(format.cleanIpcErrorMessage("Error invoking remote method 'x': Error: boom"), 'boom');
-  assert.equal(format.cleanIpcErrorMessage('plain'), 'plain');
+test('errorMessage: invoke の reject（文字列）と例外のどちらからも本文を取り出す', () => {
+  assert.equal(format.errorMessage('ポート番号は1〜65535の整数で指定してください'), 'ポート番号は1〜65535の整数で指定してください');
+  assert.equal(format.errorMessage(new TypeError('boom')), 'boom');
+  assert.equal(format.errorMessage(undefined), '');
 });
 
 test('buildSeriesPath: 点が1つでも線を描き、最大値で高さを正規化する', () => {

@@ -1,5 +1,7 @@
 // renderer のエントリーポイント。各モジュールの初期化と、画面をまたぐイベントの配線だけを行う
-import { cleanIpcErrorMessage } from './lib/format.js';
+// bridge.js は window.portManager を定義するため、必ず最初に import する
+import './bridge.js';
+import { errorMessage } from './lib/format.js';
 import { initDashboard, loadDashboard, showDashboardView } from './ui/dashboard.js';
 import { initDiagnostics, loadDiagnostics } from './ui/diagnostics.js';
 import { showToast } from './ui/dom.js';
@@ -11,10 +13,9 @@ import { getActiveView, initNavigation } from './ui/navigation.js';
 import { initSettings, loadSettings } from './ui/settings.js';
 import { initSidebar } from './ui/sidebar.js';
 
-// Main側の検証エラー等でinvokeがrejectされた場合に、握りつぶさず利用者に見せる
+// Rust 側の検証エラー等でinvokeがrejectされた場合に、握りつぶさず利用者に見せる
 window.addEventListener('unhandledrejection', (event) => {
-  const raw = event.reason?.message ?? String(event.reason);
-  const message = cleanIpcErrorMessage(raw);
+  const message = errorMessage(event.reason);
   pushEvent('warn', message);
   showToast(message);
 });

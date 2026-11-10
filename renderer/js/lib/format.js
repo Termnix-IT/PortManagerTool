@@ -38,7 +38,8 @@ export function getProcessInitial(name) {
   return (source[0] || '?').toUpperCase();
 }
 
-// ipcRenderer.invoke の reject は "Error invoking remote method 'x': ValidationError: 本文" の形になる
-export function cleanIpcErrorMessage(raw) {
-  return String(raw ?? '').replace(/^Error invoking remote method '[^']+': (?:\w*Error: )?/, '');
+// invoke の reject は Rust 側のエラー文字列そのもの。renderer 内の例外は Error になる
+export function errorMessage(reason) {
+  if (typeof reason === 'string') return reason;
+  return String(reason?.message ?? reason ?? '');
 }

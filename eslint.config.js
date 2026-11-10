@@ -12,11 +12,11 @@ const sharedRules = {
 
 module.exports = [
   {
-    ignores: ['node_modules/**', 'dist/**', 'out/**'],
+    ignores: ['node_modules/**', 'src-tauri/target/**', 'src-tauri/gen/**'],
   },
   js.configs.recommended,
   {
-    // main / preload / src / test: Node.js (CommonJS)
+    // test / 設定ファイル: Node.js (CommonJS)
     files: ['**/*.js'],
     ignores: ['renderer/**'],
     languageOptions: {
@@ -36,7 +36,7 @@ module.exports = [
     },
     rules: {
       ...sharedRules,
-      'no-restricted-globals': ['error', { name: 'require', message: 'rendererではNode APIを使わず window.portManager 経由でmainと通信する' }],
+      'no-restricted-globals': ['error', { name: 'require', message: 'rendererではNode APIを使わず window.portManager 経由でRust側と通信する' }],
     },
   },
 ];
